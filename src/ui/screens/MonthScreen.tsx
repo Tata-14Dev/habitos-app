@@ -1,0 +1,171 @@
+import { useEffect, useMemo, useRef } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { monthRange, weekday, yearMonth } from '../../domain/dates'
+import { buildDoneLookup, formatPct, isHabitActive, linkedHabitDays, mentalState, monthStats } from '../../domain/habits'
+import { setHabitDone } from '../../data/repo'
+import { AreaTrend } from '../../charts/AreaTrend'
+import { Card, cx, Empty, ProgressBar, SectionTitle } from '../components'
+import { monthLabel, WEEKDAY_SHORT } from '../format'
+import { useAllPlanItems, useDayMoods, useHabitLogs, useHabits, usePlans, useSettings, useToday } from '../hooks'
+
+export function MonthScreen() {
+  const today = useToday()
+  const params = useParams()
+  const cur = yearMonth(today)
+  const year = Number(params.year) || cur.year
+  const month = Number(params.month) || cur.month
+  const { from, to } = monthRange(year, month)
+
+  const habits = useHabits()
+  const logs = useHabitLogs(from, to)
+  const moods = useDayMoods(from, to)
+  const plans = usePlans()
+  const items = useAllPlanItems()
+  const { weekStartsMonday } = useSettings()
+
+  const isDone = useMemo(() => {
+    const derived: Record<string, Set<string>> = {}
+    for (const p of plans ?? []) {
+      if (p.linkedHabitId) derived[p.linkedHabitId] = linkedHabitDays((items ?? []).filter((i) => i.planId === p.id))
+    }
+    return buildDoneLookup(logs ?? [], derived)
+  }, [logs, plans, items])
+
+  const stats = useMemo(() => monthStats(habits ?? [], year, month, isDone, today), [habits, year, month, isDone, today])
+  const monthHabits = (habits ?? []).filter((h) => stats.days.some((d) => isHabitActive(h, d.date)))
+  const moodByDate = new Map((moods ?? []).map((m) => [m.date, m]))
+
+  const prev = month === 1 ? [year - 1, 12] : [year, month - 1]
+  const next = month === 12 ? [year + 1, 1] : [year, month + 1]
+  const weekBreak = weekStartsMonday ? 1 : 0
+  const scrollRef = useRef<HTMLDivElement>(null)
+  // Open the grid scrolled so today is visible.
+  useEffect(() => {
+    const el = scrollRef.current?.querySelector<HTMLElement>(`[data-date="${today}"]`)
+    if (el && scrollRef.current) scrollRef.current.scrollLeft = Math.max(0, el.offsetLeft - scrollRef.current.clientWidth / 2)
+  }, [today, year, month, monthHabits.length])
+
+  return (
+    <div className="space-y-4">
+      <header className="flex items-center justify-between pt-2">
+        <Link to={`/habitos/mes/${prev[0]}/${prev[1]}`} className="grid size-11 place-items-center rounded-xl bg-white text-xl dark:bg-neutral-800" aria-label="Mes anterior">
+          ‹
+        </Link>
+        <div className="text-center">
+          <h1 className="text-xl font-semibold capitalize">{monthLabel(year, month)}</h1>
+          <p className="text-sm text-ink-soft dark:text-neutral-400">Mes: {formatPct(stats.total)}</p>
+        </div>
+        <Link to={`/habitos/mes/${next[0]}/${next[1]}`} className="grid size-11 place-items-center rounded-xl bg-white text-xl dark:bg-neutral-800" aria-label="Mes siguiente">
+          ›
+        </Link>
+      </header>
+
+      <Card className="p-0">
+        {monthHabits.length === 0 ? (
+          <Empty>Ningún hábito vigente este mes.</Empty>
+        ) : (
+          <div ref={scrollRef} className="overflow-x-auto">
+            <table className="border-separate border-spacing-0 text-xs">
+              <thead>
+                <tr>
+                  <th className="sticky left-0 z-10 bg-white p-2 text-left dark:bg-neutral-800">Hábito</th>
+                  {stats.days.map((d) => (
+                    <th
+                      key={d.date}
+                      data-date={d.date}
+                      className={cx(
+                        'min-w-8 p-1 text-center font-normal text-ink-soft',
+                        weekday(d.date) === weekBreak && 'border-l border-line dark:border-neutral-700',
+                        d.date === today && 'text-ink font-bold dark:text-neutral-100',
+                      )}
+                    >
+                      {WEEKDAY_SHORT[weekday(d.date)]}
+                      <br />
+                      {Number(d.date.slice(8))}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {monthHabits.map((h) => (
+                  <tr key={h.id}>
+                    <th className="sticky left-0 z-10 max-w-32 truncate bg-white p-2 text-left font-normal dark:bg-neutral-800">
+                      {h.emoji} {h.name}
+                    </th>
+                    {stats.days.map((d) => {
+                      const active = isHabitActive(h, d.date)
+                      const done = active && isDone(h.id, d.date)
+                      return (
+                        <td key={d.date} className={cx('p-0.5 text-center', weekday(d.date) === weekBreak && 'border-l border-line dark:border-neutral-700')}>
+                          {active ? (
+                            <button
+                              aria-label={`${h.name} ${d.date}`}
+                              disabled={d.future}
+                              onClick={() => void setHabitDone(h.id, d.date, !done)}
+                              className={cx(
+                                'size-7 rounded-md border',
+                                done ? 'border-progress bg-progress' : 'border-line bg-paper dark:border-neutral-600 dark:bg-neutral-700',
+                                d.future && 'opacity-40',
+                              )}
+                            />
+                          ) : (
+                            <span className="text-line">·</span>
+                          )}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+                <tr>
+                  <th className="sticky left-0 z-10 bg-white p-2 text-left font-semibold dark:bg-neutral-800">% día</th>
+                  {stats.days.map((d) => (
+                    <td key={d.date} className="p-1 text-center text-[10px] text-ink-soft">
+                      {d.future ? '' : formatPct(d.ratio).replace('%', '')}
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      <Card>
+        <SectionTitle>Por hábito</SectionTitle>
+        <ul className="space-y-3">
+          {monthHabits.map((h) => (
+            <li key={h.id}>
+              <div className="mb-1 flex justify-between text-sm">
+                <span>
+                  {h.emoji} {h.name}
+                </span>
+                <span className="font-medium">{formatPct(stats.perHabit[h.id])}</span>
+              </div>
+              <ProgressBar value={stats.perHabit[h.id]?.pct ?? null} />
+            </li>
+          ))}
+        </ul>
+      </Card>
+
+      <Card>
+        <SectionTitle>Progreso diario</SectionTitle>
+        <AreaTrend
+          kind="progress"
+          max={1}
+          format={(v) => `${Math.round(v * 100)}%`}
+          data={stats.days.map((d) => ({ label: String(Number(d.date.slice(8))), value: d.future ? null : d.ratio.pct }))}
+        />
+      </Card>
+
+      <Card>
+        <SectionTitle>Estado mental</SectionTitle>
+        <AreaTrend
+          kind="mood"
+          max={10}
+          format={(v) => v.toFixed(1).replace('.', ',')}
+          data={stats.days.map((d) => ({ label: String(Number(d.date.slice(8))), value: mentalState(moodByDate.get(d.date)) }))}
+        />
+      </Card>
+    </div>
+  )
+}

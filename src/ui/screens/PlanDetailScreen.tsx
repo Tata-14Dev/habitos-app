@@ -1,0 +1,388 @@
+import { useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { compareISO, formatAR, type ISODate } from '../../domain/dates'
+import { marginLabel, situationLabel } from '../../domain/plans'
+import type { PlanMetrics } from '../../domain/schedule'
+import {
+  addItems,
+  deleteItem,
+  deleteMilestone,
+  deletePlan,
+  replanFromToday,
+  reorderItems,
+  saveMilestone,
+  setItemDone,
+  updateItem,
+  updatePlan,
+} from '../../data/repo'
+import type { Milestone, Plan, PlanItem } from '../../data/types'
+import { Button, Card, Check, cx, Empty, Field, inputCls, PendingNotice, ProgressBar, SectionTitle, Sheet } from '../components'
+import { useMilestones, usePlan, usePlanItems, useToday } from '../hooks'
+import { SortableList } from '../Sortable'
+import { usePlanModel, type PlanModel } from '../usePlanModel'
+import { PlanForm } from './PlanForm'
+
+export function PlanDetailScreen() {
+  const { id } = useParams()
+  const today = useToday()
+  const plan = usePlan(id)
+  const items = usePlanItems(id)
+  const model = usePlanModel(plan, items, today)
+  const [editing, setEditing] = useState(false)
+  const [pasting, setPasting] = useState(false)
+  const [editItem, setEditItem] = useState<PlanItem | null>(null)
+  const navigate = useNavigate()
+
+  if (plan === undefined || !items || !model) return <Empty>Cargando…</Empty>
+  if (!plan || plan.deletedAt) return <Empty>Este plan no existe.</Empty>
+
+  return (
+    <div className="space-y-4">
+      <header className="flex items-start justify-between gap-2 pt-2">
+        <div>
+          <h1 className="text-2xl font-semibold">{plan.name}</h1>
+          <p className="text-sm text-ink-soft dark:text-neutral-400">
+            {formatAR(plan.startDate)} → {formatAR(plan.deadline)} · {String(plan.pace).replace('.', ',')}/día
+          </p>
+        </div>
+        <Button onClick={() => setEditing(true)}>Editar</Button>
+      </header>
+
+      <Dashboard plan={plan} model={model} items={items} today={today} />
+
+      <Card>
+        <SectionTitle right={<Button onClick={() => setPasting(true)}>+ Ítems</Button>}>Ítems</SectionTitle>
+        {items.length === 0 ? (
+          <Empty>Pegá la lista de ítems con "+ Ítems".</Empty>
+        ) : (
+          <>
+            <div className="mb-1 grid grid-cols-[2rem_2.75rem_1fr_auto] gap-2 px-1 text-[11px] uppercase tracking-wide text-ink-soft">
+              <span />
+              <span />
+              <span>Ítem</span>
+              <span className="text-right">Plan · Proy. · Real</span>
+            </div>
+            <SortableList
+              items={items}
+              onReorder={(ids) => void reorderItems(plan.id, ids)}
+              className="divide-y divide-line dark:divide-neutral-700"
+              render={(it, handle) => (
+                <ItemRow item={it} plan={plan} model={model} today={today} handle={handle} onEdit={() => setEditItem(it)} />
+              )}
+            />
+          </>
+        )}
+      </Card>
+
+      <Milestones planId={plan.id} today={today} />
+
+      <Card>
+        <SectionTitle>Acciones</SectionTitle>
+        <div className="space-y-2">
+          <Button
+            className="w-full"
+            onClick={() => {
+              if (!confirm('¿Reemplazar el plan original por la proyección actual? Esto no se puede deshacer.')) return
+              void replanFromToday(plan.id, today).then((r) => {
+                if (r === 'pending') alert('🛠️ Pendiente: implementá projectSchedule (ver docs/GUIA_REPROGRAMACION.md)')
+              })
+            }}
+          >
+            🔁 Replanificar desde hoy
+          </Button>
+          <Button
+            variant="danger"
+            className="w-full"
+            onClick={() => {
+              if (confirm(`¿Borrar el plan "${plan.name}" con todos sus ítems?`)) void deletePlan(plan.id).then(() => navigate('/planes'))
+            }}
+          >
+            Borrar plan
+          </Button>
+        </div>
+      </Card>
+
+      <Sheet open={editing} onClose={() => setEditing(false)} title="Editar plan">
+        <PlanForm
+          plan={plan}
+          submitLabel="Guardar"
+          onSubmit={async (v) => {
+            await updatePlan(plan.id, {
+              name: v.name,
+              startDate: v.startDate,
+              deadline: v.deadline,
+              pace: v.pace,
+              restWeekdays: v.restWeekdays,
+              blockedDates: v.blockedDates,
+            })
+            setEditing(false)
+          }}
+        />
+        <p className="mt-3 text-xs text-ink-soft">
+          Cambiar la configuración recalcula la proyección al instante. El plan original solo cambia con "Replanificar desde hoy".
+        </p>
+      </Sheet>
+
+      <Sheet open={pasting} onClose={() => setPasting(false)} title="Agregar ítems">
+        <PasteItems planId={plan.id} onDone={() => setPasting(false)} />
+      </Sheet>
+
+      <Sheet open={!!editItem} onClose={() => setEditItem(null)} title="Ítem">
+        {editItem && <ItemForm item={editItem} onDone={() => setEditItem(null)} />}
+      </Sheet>
+    </div>
+  )
+}
+
+function Dashboard({ plan, model, items, today }: { plan: Plan; model: PlanModel; items: PlanItem[]; today: ISODate }) {
+  const m: PlanMetrics | null = model.metrics.ok ? model.metrics.value : null
+  const byId = new Map(items.map((i) => [i.id, i]))
+  return (
+    <Card>
+      <SectionTitle>Panel</SectionTitle>
+      <div className="mb-1 flex justify-between text-sm">
+        <span>Progreso</span>
+        <span className="font-semibold">
+          {model.doneCount}/{model.total}
+        </span>
+      </div>
+      <ProgressBar value={model.total ? model.doneCount / model.total : null} />
+
+      <div className="mt-3">
+        <PendingNotice fns={model.pending} />
+      </div>
+
+      {m && (
+        <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+          <Stat label="Situación" value={situationLabel(m.diff)} sub={`Debería llevar ${m.shouldHaveDone}, llevo ${m.done}`} />
+          <Stat label="Margen" value={m.marginDays === null ? '—' : marginLabel(m.marginDays)} sub={`Límite ${formatAR(plan.deadline)}`} />
+          <Stat label="Fin estimado" value={m.estimatedEnd ? formatAR(m.estimatedEnd) : '—'} />
+          <Stat
+            label="Ritmo necesario"
+            value={m.requiredPace === null ? 'Sin días' : `${String(m.requiredPace).replace('.', ',')}/día`}
+            sub={`Tu ritmo: ${String(plan.pace).replace('.', ',')}/día`}
+          />
+        </dl>
+      )}
+
+      {m && (
+        <div className="mt-4">
+          <p className="mb-1 text-sm font-medium">Hoy toca</p>
+          {m.todayItemIds.length === 0 ? (
+            <p className="text-sm text-ink-soft">Nada pendiente para hoy. 🎉</p>
+          ) : (
+            <ul className="space-y-1">
+              {m.todayItemIds.map((id) => {
+                const it = byId.get(id)
+                if (!it) return null
+                return (
+                  <li key={id} className="flex items-center gap-3">
+                    <Check checked={it.done} label={it.title} onChange={(v) => void setItemDone(id, v, today)} />
+                    <span>{it.title}</span>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+      )}
+    </Card>
+  )
+}
+
+function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="rounded-xl bg-paper p-3 dark:bg-neutral-900">
+      <dt className="text-xs text-ink-soft dark:text-neutral-400">{label}</dt>
+      <dd className="font-semibold">{value}</dd>
+      {sub && <dd className="text-xs text-ink-soft dark:text-neutral-400">{sub}</dd>}
+    </div>
+  )
+}
+
+function ItemRow({
+  item,
+  plan,
+  model,
+  today,
+  handle,
+  onEdit,
+}: {
+  item: PlanItem
+  plan: Plan
+  model: PlanModel
+  today: ISODate
+  handle: React.ReactNode
+  onEdit: () => void
+}) {
+  const base = plan.baseline[item.id]
+  const proj = model.projection.ok ? model.projection.value[item.id] : undefined
+  const late = !item.done && base && proj && compareISO(proj, base) > 0
+  return (
+    <div className="grid grid-cols-[2rem_2.75rem_1fr_auto] items-center gap-2 py-1.5">
+      {handle}
+      <Check checked={item.done} label={item.title} onChange={(v) => void setItemDone(item.id, v, today)} />
+      <button className="min-w-0 text-left" onClick={onEdit}>
+        <span className={cx('block truncate', item.done && 'text-ink-soft line-through')}>{item.title}</span>
+        {item.section && <span className="block truncate text-xs text-ink-soft">{item.section}</span>}
+      </button>
+      <span className="text-right font-mono text-[11px] leading-tight text-ink-soft dark:text-neutral-400">
+        {base ? formatAR(base, false) : '—'}
+        <br />
+        <span className={cx(late && 'text-amber-700 dark:text-amber-400')}>{proj ? formatAR(proj, false) : '—'}</span>
+        <br />
+        <span className="text-ink dark:text-neutral-200">{item.done && item.doneDate ? formatAR(item.doneDate, false) : ''}</span>
+      </span>
+    </div>
+  )
+}
+
+function ItemForm({ item, onDone }: { item: PlanItem; onDone: () => void }) {
+  const [title, setTitle] = useState(item.title)
+  const [section, setSection] = useState(item.section ?? '')
+  const [notes, setNotes] = useState(item.notes ?? '')
+  const [doneDate, setDoneDate] = useState(item.doneDate ?? '')
+  return (
+    <form
+      className="space-y-3"
+      onSubmit={(e) => {
+        e.preventDefault()
+        void updateItem(item.id, {
+          title: title.trim() || item.title,
+          section: section.trim() || undefined,
+          notes: notes.trim() || undefined,
+          ...(item.done && doneDate ? { doneDate } : {}),
+        }).then(onDone)
+      }}
+    >
+      <Field label="Nombre">
+        <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} />
+      </Field>
+      <Field label="Módulo o sección">
+        <input className={inputCls} value={section} onChange={(e) => setSection(e.target.value)} />
+      </Field>
+      <Field label="Notas">
+        <textarea className={cx(inputCls, 'min-h-20')} value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </Field>
+      {item.done && (
+        <Field label="Fecha en que lo hiciste">
+          <input type="date" className={inputCls} value={doneDate} onChange={(e) => setDoneDate(e.target.value)} />
+        </Field>
+      )}
+      <div className="flex gap-2">
+        <Button type="submit" variant="primary" className="flex-1">
+          Guardar
+        </Button>
+        <Button
+          type="button"
+          variant="danger"
+          onClick={() => {
+            if (confirm(`¿Borrar "${item.title}"?`)) void deleteItem(item.id).then(onDone)
+          }}
+        >
+          Borrar
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+function PasteItems({ planId, onDone }: { planId: string; onDone: () => void }) {
+  const [text, setText] = useState('')
+  const count = text.split(/\r?\n/).filter((l) => l.trim()).length
+  return (
+    <div className="space-y-3">
+      <textarea
+        className={cx(inputCls, 'min-h-48 font-mono text-sm')}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder={'Un ítem por línea. Opcional: "Módulo: ítem"\nBlue Team: Intro to SOC\nSIEM: Splunk Basics'}
+        autoFocus
+      />
+      <Button variant="primary" className="w-full" disabled={!count} onClick={() => void addItems(planId, text).then(onDone)}>
+        Agregar {count || ''} {count === 1 ? 'ítem' : 'ítems'}
+      </Button>
+    </div>
+  )
+}
+
+function Milestones({ planId, today }: { planId: string; today: ISODate }) {
+  const milestones = useMilestones(planId)
+  const [editing, setEditing] = useState<Partial<Milestone> | null>(null)
+  return (
+    <Card>
+      <SectionTitle right={<Button onClick={() => setEditing({ planId, from: today, to: today })}>+ Etapa</Button>}>
+        Etapas
+      </SectionTitle>
+      {!milestones?.length ? (
+        <Empty>Sin etapas.</Empty>
+      ) : (
+        <ul className="divide-y divide-line dark:divide-neutral-700">
+          {milestones.map((m) => {
+            const current = compareISO(m.from, today) <= 0 && compareISO(today, m.to) <= 0
+            return (
+              <li key={m.id} className="flex items-start gap-3 py-2">
+                <Check checked={m.done} label={m.title} onChange={(v) => void saveMilestone({ ...m, done: v })} />
+                <button className="flex-1 text-left" onClick={() => setEditing(m)}>
+                  <span className={cx('block', m.done && 'text-ink-soft line-through')}>
+                    {m.title} {current && !m.done && <span className="ml-1 rounded bg-progress/30 px-1.5 text-xs">ahora</span>}
+                  </span>
+                  <span className="block text-xs text-ink-soft">
+                    {m.from === m.to ? formatAR(m.from) : `${formatAR(m.from)} → ${formatAR(m.to)}`}
+                  </span>
+                  {m.description && <span className="block text-xs text-ink-soft">{m.description}</span>}
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+      <Sheet open={!!editing} onClose={() => setEditing(null)} title={editing?.id ? 'Editar etapa' : 'Nueva etapa'}>
+        {editing && <MilestoneForm m={editing} onDone={() => setEditing(null)} />}
+      </Sheet>
+    </Card>
+  )
+}
+
+function MilestoneForm({ m, onDone }: { m: Partial<Milestone>; onDone: () => void }) {
+  const [title, setTitle] = useState(m.title ?? '')
+  const [from, setFrom] = useState(m.from ?? '')
+  const [to, setTo] = useState(m.to ?? '')
+  const [description, setDesc] = useState(m.description ?? '')
+  const valid = title.trim() && from && to && to >= from
+  return (
+    <form
+      className="space-y-3"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (!valid) return
+        void saveMilestone({ ...m, planId: m.planId!, title: title.trim(), from, to, description: description.trim() || undefined }).then(onDone)
+      }}
+    >
+      <Field label="Nombre">
+        <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} />
+      </Field>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Desde">
+          <input type="date" className={inputCls} value={from} onChange={(e) => setFrom(e.target.value)} />
+        </Field>
+        <Field label="Hasta">
+          <input type="date" className={inputCls} value={to} onChange={(e) => setTo(e.target.value)} />
+        </Field>
+      </div>
+      <Field label="Descripción">
+        <textarea className={cx(inputCls, 'min-h-20')} value={description} onChange={(e) => setDesc(e.target.value)} />
+      </Field>
+      <div className="flex gap-2">
+        <Button type="submit" variant="primary" className="flex-1" disabled={!valid}>
+          Guardar
+        </Button>
+        {m.id && (
+          <Button type="button" variant="danger" onClick={() => void deleteMilestone(m.id!).then(onDone)}>
+            Borrar
+          </Button>
+        )}
+      </div>
+    </form>
+  )
+}

@@ -12,6 +12,7 @@ import { newId, nowStamp, store } from './store'
 import {
   DEFAULT_SETTINGS,
   type Habit,
+  type Meal,
   type Milestone,
   type Plan,
   type PlanItem,
@@ -51,6 +52,19 @@ export async function reorderHabits(orderedIds: string[]) {
 
 export async function setHabitDone(habitId: string, date: ISODate, done: boolean) {
   await store.put('habitLogs', { id: `${habitId}|${date}`, habitId, date, done })
+}
+
+/** Progress habits with an amount goal: sets the amount done on `date` (0 clears it). */
+export async function setHabitAmount(habitId: string, date: ISODate, amount: number) {
+  const value = Math.max(0, Math.round(amount * 100) / 100)
+  await store.put('habitLogs', { id: `${habitId}|${date}`, habitId, date, done: value > 0, amount: value })
+}
+
+/** Adds `delta` (can be negative) to the amount logged on `date`. */
+export async function addHabitAmount(habitId: string, date: ISODate, delta: number) {
+  const current = await db.habitLogs.get(`${habitId}|${date}`)
+  const base = current && !current.deletedAt ? (current.amount ?? 0) : 0
+  await setHabitAmount(habitId, date, base + delta)
 }
 
 export async function setMood(date: ISODate, values: { mood?: number; motivation?: number }) {
@@ -210,6 +224,25 @@ export async function addToPlanLog(planId: string, date: ISODate, delta: number)
   const current = await db.planLogs.get(`${planId}|${date}`)
   const base = current && !current.deletedAt ? current.amount : 0
   await setPlanLog(planId, date, base + delta)
+}
+
+// ─── Health (optional): weight & calories ───────────────────────────────────
+
+/** One weigh-in per day; 0 or less removes it. */
+export async function saveWeight(date: ISODate, kg: number) {
+  if (!(kg > 0)) {
+    if (await db.bodyWeights.get(date)) await store.softDelete('bodyWeights', [date])
+    return
+  }
+  await store.put('bodyWeights', { id: date, date, kg: Math.round(kg * 10) / 10 })
+}
+
+export async function addFood(input: { date: ISODate; kcal: number; label?: string; meal?: Meal }) {
+  return store.put('foodEntries', { id: newId(), ...input, kcal: Math.round(input.kcal) })
+}
+
+export async function deleteFood(id: string) {
+  await store.softDelete('foodEntries', [id])
 }
 
 // ─── Milestones ─────────────────────────────────────────────────────────────

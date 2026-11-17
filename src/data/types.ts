@@ -1,4 +1,5 @@
 import type { ISODate } from '../domain/dates'
+import type { HabitGoal, HabitKind, TimeOfDay } from '../domain/habits'
 
 export type { ISODate }
 
@@ -16,6 +17,16 @@ export interface Habit extends SyncFields {
   color?: string
   startDate: ISODate
   endDate?: ISODate
+  /** Missing on habits created before types existed → 'fixed' (every day). */
+  kind?: HabitKind
+  /** Fixed and scheduled habits: moment of the day to group them in "Hoy". */
+  timeOfDay?: TimeOfDay
+  /** Scheduled: a single date… */
+  onDate?: ISODate
+  /** …or some weekdays (0 = Sunday). */
+  weekdays?: number[]
+  /** Progress habits. */
+  goal?: HabitGoal
   order: number
   createdAt: string
 }
@@ -25,6 +36,8 @@ export interface HabitLog extends SyncFields {
   habitId: string
   date: ISODate
   done: boolean
+  /** Progress habits with an amount goal: how much was done that day. */
+  amount?: number
 }
 
 export interface DayMood extends SyncFields {
@@ -76,6 +89,21 @@ export interface PlanLog extends SyncFields {
   amount: number
 }
 
+/** One weigh-in per day (id === date). */
+export interface BodyWeight extends SyncFields {
+  date: ISODate
+  kg: number
+}
+
+export type Meal = 'desayuno' | 'almuerzo' | 'merienda' | 'cena' | 'snack'
+
+export interface FoodEntry extends SyncFields {
+  date: ISODate
+  kcal: number
+  label?: string
+  meal?: Meal
+}
+
 /** Last projection computed on a device (id === planId). The server reads it for "Hoy toca: Room 12". */
 export interface PlanProjection extends SyncFields {
   planId: string
@@ -108,6 +136,12 @@ export interface Settings extends SyncFields {
   /** 'HH:MM' local time of the morning reminder. */
   reminderTime: string
   timeZone: string
+  /** Optional weight & calorie tracking ("Salud" tab). */
+  healthEnabled?: boolean
+  /** kcal per day. */
+  calorieTarget?: number
+  /** kg. */
+  weightGoal?: number
 }
 
 export interface PushSubscriptionRecord extends SyncFields {
@@ -126,6 +160,8 @@ export interface CollectionMap {
   milestones: Milestone
   projections: PlanProjection
   tasks: Task
+  bodyWeights: BodyWeight
+  foodEntries: FoodEntry
   settings: Settings
   pushSubscriptions: PushSubscriptionRecord
 }
@@ -142,6 +178,8 @@ export const COLLECTIONS: CollectionName[] = [
   'milestones',
   'projections',
   'tasks',
+  'bodyWeights',
+  'foodEntries',
   'settings',
   'pushSubscriptions',
 ]

@@ -26,6 +26,8 @@ export class HabitosDB extends Dexie {
   milestones!: Table<CollectionMap['milestones'], string>
   projections!: Table<CollectionMap['projections'], string>
   tasks!: Table<CollectionMap['tasks'], string>
+  bodyWeights!: Table<CollectionMap['bodyWeights'], string>
+  foodEntries!: Table<CollectionMap['foodEntries'], string>
   settings!: Table<CollectionMap['settings'], string>
   pushSubscriptions!: Table<CollectionMap['pushSubscriptions'], string>
   outbox!: Table<OutboxEntry, string>
@@ -50,6 +52,11 @@ export class HabitosDB extends Dexie {
     // v2: amount plans (hours, pages…) log progress per day.
     this.version(2).stores({
       planLogs: 'id, planId, date, updatedAt',
+    })
+    // v3: optional weight & calorie tracking.
+    this.version(3).stores({
+      bodyWeights: 'id, date, updatedAt',
+      foodEntries: 'id, date, updatedAt',
     })
   }
 

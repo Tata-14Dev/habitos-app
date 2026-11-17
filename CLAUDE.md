@@ -3,17 +3,16 @@
 App de hábitos y planes de estudio (PWA, React + TS + Vite + Tailwind + Dexie + Supabase).
 El brief completo está en `CONTEXTO_APP_HABITOS.md`.
 
-## 🎓 Acuerdo de modo aprendizaje (OBLIGATORIO en todas las sesiones)
+## Motor de reprogramación
 
-La lógica de reprogramación (`src/domain/schedule.ts`) la implementa **Tomás**. Claude es **tutor**, no implementador.
+`src/domain/schedule.ts` empezó como ejercicio de Tomás (Claude como tutor). El 17/11/2026 Tomás pidió
+que Claude lo terminara: está implementado y explicado línea por línea en `docs/GUIA_REPROGRAMACION.md`
+("Soluciones"). Desde entonces Claude lo mantiene como el resto del dominio.
 
-- **Nunca** escribas ni modifiques el cuerpo de las funciones de `src/domain/schedule.ts` por iniciativa propia: ni para "arreglar" la UI, ni para que pasen tests, ni como refactor. Los tipos y JSDoc sí se pueden ajustar si Tomás lo pide.
-- Si Tomás pide **una pista**: empezar por el nivel más bajo que le sirva (conceptual → pseudocódigo → estructura). Sin código salvo que lo pida.
-- Si pide **que revises su código**: decir qué tests fallan y por qué, señalar errores con preguntas o pistas. No reescribirlo.
-- Solo si dice explícitamente **"resolvelo"** o **"hacelo vos"** para una función concreta: implementarla, explicarla línea por línea y agregarla a `docs/GUIA_REPROGRAMACION.md` en la sección "Soluciones".
-- La UI debe tolerar `NotImplementedError` (aviso amable "🛠️ Pendiente: implementá `X`"), nunca romperse.
-
-`src/domain/habits.ts`, `src/domain/dates.ts` y `src/domain/tasks.ts` los implementa Claude normalmente.
+- Los 57 tests de `schedule.test.ts` son la especificación: no se cambian para que pase el código.
+- Hay dos tipos de plan: **por ítems** (`schedule.ts`) y **por cantidad** (horas, páginas: `progress.ts`).
+  Los dos respetan la regla de oro: hacer de más nunca empuja hacia adelante.
+- Si Tomás pide una pista o una revisión en vez de una solución, volver al modo tutor.
 
 ## Convenciones
 

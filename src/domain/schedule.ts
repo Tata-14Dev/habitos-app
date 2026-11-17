@@ -1,8 +1,8 @@
 /**
- * 🎓 EJERCICIO DE TOMÁS — lógica de reprogramación de planes de estudio.
+ * Lógica de reprogramación de planes de estudio por ítems.
  *
- * Cada función tiene la firma, los tipos y un JSDoc con el enunciado. El cuerpo solo tira
- * `NotImplementedError`: tu trabajo es reemplazarlo por la implementación.
+ * Empezó como ejercicio (enunciado en cada JSDoc, especificación en los tests). La solución
+ * está explicada línea por línea en docs/GUIA_REPROGRAMACION.md → "Soluciones".
  *
  * - Tests:  npm test -- schedule                      (todos)
  *           npm test -- schedule -t "nthAvailableDay"  (una función)
@@ -13,6 +13,7 @@
  * strings, que funciona porque el formato es fijo), nunca con objetos Date.
  */
 import type { ISODate } from './dates'
+import { addDays, diffDays, maxISO, weekday } from './dates'
 import { NotImplementedError } from './errors'
 
 export type { ISODate }
@@ -87,7 +88,7 @@ export interface PlanMetrics {
  * isAvailableDay('2026-11-23', { ...cfg, restWeekdays: [0] }) // → true
  */
 export function isAvailableDay(date: ISODate, config: ScheduleConfig): boolean {
-  throw new NotImplementedError('isAvailableDay')
+  return !config.restWeekdays.includes(weekday(date)) && !config.blockedDates.includes(date)
 }
 
 /**
@@ -103,7 +104,10 @@ export function isAvailableDay(date: ISODate, config: ScheduleConfig): boolean {
  * nextAvailableDay('2026-11-21', { ...cfg, restWeekdays: [0] }) // → '2026-11-23'
  */
 export function nextAvailableDay(date: ISODate, config: ScheduleConfig): ISODate {
-  throw new NotImplementedError('nextAvailableDay')
+  assertSomeDayAvailable(config)
+  let d = addDays(date, 1)
+  while (!isAvailableDay(d, config)) d = addDays(d, 1)
+  return d
 }
 
 /**
@@ -120,7 +124,11 @@ export function nextAvailableDay(date: ISODate, config: ScheduleConfig): ISODate
  * nthAvailableDay('2026-11-22', 1, { ...cfg, restWeekdays: [0] }) // → '2026-11-23'
  */
 export function nthAvailableDay(from: ISODate, n: number, config: ScheduleConfig): ISODate {
-  throw new NotImplementedError('nthAvailableDay')
+  if (!Number.isInteger(n) || n < 1) throw new RangeError(`n tiene que ser un entero ≥ 1 (recibí ${n})`)
+  assertSomeDayAvailable(config)
+  let d = isAvailableDay(from, config) ? from : nextAvailableDay(from, config)
+  for (let i = 1; i < n; i++) d = nextAvailableDay(d, config)
+  return d
 }
 
 /**
@@ -134,7 +142,9 @@ export function nthAvailableDay(from: ISODate, n: number, config: ScheduleConfig
  * countAvailableDays('2026-11-17', '2026-11-16', cfg) // → 0
  */
 export function countAvailableDays(from: ISODate, to: ISODate, config: ScheduleConfig): number {
-  throw new NotImplementedError('countAvailableDays')
+  let count = 0
+  for (let d = from; d <= to; d = addDays(d, 1)) if (isAvailableDay(d, config)) count++
+  return count
 }
 
 /**
@@ -158,7 +168,12 @@ export function countAvailableDays(from: ISODate, to: ISODate, config: ScheduleC
  * // ritmo 0.5 → { a: '2026-11-16', b: '2026-11-18', c: '2026-11-20' }
  */
 export function buildBaseline(items: readonly ScheduleItem[], config: ScheduleConfig): DateMap {
-  throw new NotImplementedError('buildBaseline')
+  assertPace(config.pace)
+  const out: DateMap = {}
+  items.forEach((item, idx) => {
+    out[item.id] = nthAvailableDay(config.startDate, Math.floor(idx / config.pace) + 1, config)
+  })
+  return out
 }
 
 /**
@@ -195,7 +210,33 @@ export function projectSchedule(
   config: ScheduleConfig,
   today: ISODate,
 ): DateMap {
-  throw new NotImplementedError('projectSchedule')
+  assertPace(config.pace)
+  const { pace } = config
+  const base = maxISO(today, config.startDate)
+  const out: DateMap = {}
+
+  for (const item of items) if (item.done) out[item.id] = item.doneDate ?? today
+  const pending = items.filter((i) => !i.done)
+
+  if (base > today) {
+    pending.forEach((item, idx) => {
+      out[item.id] = nthAvailableDay(base, Math.floor(idx / pace) + 1, config)
+    })
+  } else if (isAvailableDay(today, config)) {
+    const doneToday = items.filter((i) => i.done && (i.doneDate ?? today) === today).length
+    const remainingToday = Math.max(0, Math.ceil(pace) - doneToday)
+    const tomorrow = nextAvailableDay(today, config)
+    pending.forEach((item, idx) => {
+      const k = idx + 1
+      out[item.id] = k <= remainingToday ? today : nthAvailableDay(tomorrow, Math.ceil((k - remainingToday) / pace), config)
+    })
+  } else {
+    const next = nextAvailableDay(today, config)
+    pending.forEach((item, idx) => {
+      out[item.id] = nthAvailableDay(next, Math.floor(idx / pace) + 1, config)
+    })
+  }
+  return out
 }
 
 /**
@@ -220,5 +261,48 @@ export function computePlanMetrics(
   config: ScheduleConfig,
   today: ISODate,
 ): PlanMetrics {
-  throw new NotImplementedError('computePlanMetrics')
+  const total = items.length
+  const doneItems = items.filter((i) => i.done)
+  const pendingItems = items.filter((i) => !i.done)
+  const done = doneItems.length
+  const pending = pendingItems.length
+  const shouldHaveDone = items.filter((i) => baseline[i.id] !== undefined && baseline[i.id] <= today).length
+
+  const latest = (dates: (ISODate | undefined)[]): ISODate | null =>
+    dates.reduce<ISODate | null>((max, d) => (d && (!max || d > max) ? d : max), null)
+  const estimatedEnd =
+    total === 0
+      ? null
+      : pending > 0
+        ? latest(pendingItems.map((i) => projection[i.id]))
+        : latest(doneItems.map((i) => i.doneDate ?? projection[i.id]))
+
+  const base = maxISO(today, config.startDate)
+  const daysLeft = countAvailableDays(base, config.deadline, config)
+  const requiredPace = pending === 0 ? 0 : daysLeft === 0 ? null : Math.round((pending / daysLeft) * 10) / 10
+
+  return {
+    total,
+    done,
+    pending,
+    shouldHaveDone,
+    diff: done - shouldHaveDone,
+    estimatedEnd,
+    marginDays: estimatedEnd === null ? null : diffDays(config.deadline, estimatedEnd),
+    requiredPace,
+    todayItemIds: pendingItems.filter((i) => projection[i.id] === today).map((i) => i.id),
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Auxiliares
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Si los 7 días de la semana son de descanso, ningún día puede estar disponible. */
+function assertSomeDayAvailable(config: ScheduleConfig): void {
+  if (new Set(config.restWeekdays).size >= 7) throw new Error('No hay ningún día disponible: los 7 días son de descanso')
+}
+
+function assertPace(pace: number): void {
+  if (!(pace > 0)) throw new RangeError(`El ritmo tiene que ser mayor que 0 (recibí ${pace})`)
 }

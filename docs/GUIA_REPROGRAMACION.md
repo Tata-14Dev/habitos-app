@@ -422,4 +422,190 @@ Si te trabás, pedile a Claude "una pista de `X`" o "revisá mi `X`". Solo si le
 
 ## Soluciones
 
-*(vacía a propósito: se completa solo si pedís "resolvelo" para una función concreta)*
+> El 17/11/2026 Tomás pidió que Claude terminara las 7 funciones. El código completo está en
+> [`src/domain/schedule.ts`](../src/domain/schedule.ts). Acá va cada una explicada línea por línea.
+> Si querés practicar igual, borrá el cuerpo de una función y volvé a escribirla con los tests.
+
+### Auxiliares
+
+```ts
+function assertSomeDayAvailable(config: ScheduleConfig): void {
+  if (new Set(config.restWeekdays).size >= 7) throw new Error('No hay ningún día disponible…')
+}
+function assertPace(pace: number): void {
+  if (!(pace > 0)) throw new RangeError(`El ritmo tiene que ser mayor que 0 (recibí ${pace})`)
+}
+```
+
+- `new Set(...)` saca los repetidos: `[0, 0, 1]` son 2 días distintos, no 3. Si hay 7 días distintos de descanso, ningún día puede estar disponible. Hay que cortar **antes** de entrar al `while`, porque si no queda un loop infinito.
+- `!(pace > 0)` en lugar de `pace <= 0`: así también rechaza `NaN`, porque cualquier comparación con `NaN` da `false`.
+
+### 1. `isAvailableDay`
+
+```ts
+return !config.restWeekdays.includes(weekday(date)) && !config.blockedDates.includes(date)
+```
+
+- `weekday(date)` devuelve 0–6 (domingo = 0) a partir del string local, sin pasar por UTC.
+- El día está disponible si **no** es de descanso **y** **no** es un día libre puntual. Las fechas se comparan como strings, que funciona porque el formato `YYYY-MM-DD` es fijo.
+
+### 2. `nextAvailableDay`
+
+```ts
+assertSomeDayAvailable(config)
+let d = addDays(date, 1)
+while (!isAvailableDay(d, config)) d = addDays(d, 1)
+return d
+```
+
+1. Primero el control del loop infinito.
+2. Arranca en `date + 1`, porque la función dice "estrictamente después".
+3. Avanza de a un día hasta encontrar uno disponible. Termina siempre: hay al menos un día de la semana disponible, y la lista de días libres es finita.
+
+### 3. `nthAvailableDay`
+
+```ts
+if (!Number.isInteger(n) || n < 1) throw new RangeError(…)
+assertSomeDayAvailable(config)
+let d = isAvailableDay(from, config) ? from : nextAvailableDay(from, config)
+for (let i = 1; i < n; i++) d = nextAvailableDay(d, config)
+return d
+```
+
+1. Valida `n`: `Number.isInteger` rechaza `1.5`, `NaN` e `Infinity`.
+2. El primer disponible **contando `from`**: si `from` sirve es ese; si no, el siguiente.
+3. Ya tenemos el 1.º. Se salta `n − 1` veces más al siguiente disponible.
+
+### 4. `countAvailableDays`
+
+```ts
+let count = 0
+for (let d = from; d <= to; d = addDays(d, 1)) if (isAvailableDay(d, config)) count++
+return count
+```
+
+- Recorre de `from` a `to` inclusive y cuenta. Si `from > to`, el `for` no entra nunca y devuelve 0 sin ningún `if` especial.
+- `d <= to` compara strings, igual que en `isAvailableDay`.
+
+### 5. `buildBaseline`
+
+```ts
+assertPace(config.pace)
+const out: DateMap = {}
+items.forEach((item, idx) => {
+  out[item.id] = nthAvailableDay(config.startDate, Math.floor(idx / config.pace) + 1, config)
+})
+return out
+```
+
+- `idx` es 0-based, así que `idx` ya es `i − 1` de la fórmula del enunciado: `floor((i − 1) / pace) + 1`.
+- Con ritmo 2: los idx 0 y 1 dan el día 1, los idx 2 y 3 el día 2. Con ritmo 0,5: idx 0 → día 1, idx 1 → día 3.
+- No lee `done` ni `doneDate`, y no modifica `items`: solo los recorre.
+- *Optimización posible*: llamar a `nthAvailableDay` desde el inicio por cada ítem es O(n²) días. Se puede guardar el último día calculado y avanzar desde ahí. Para 34 ítems no hace falta.
+
+### 6. `projectSchedule` ⭐
+
+```ts
+assertPace(config.pace)
+const { pace } = config
+const base = maxISO(today, config.startDate)
+const out: DateMap = {}
+
+for (const item of items) if (item.done) out[item.id] = item.doneDate ?? today
+const pending = items.filter((i) => !i.done)
+```
+
+- `base` es desde cuándo se reparte: hoy, o el inicio si el plan todavía no empezó.
+- Los hechos quedan en su fecha real. Si falta `doneDate` (un dato viejo), se usa hoy.
+- `pending` conserva el orden del array, porque `filter` no reordena. Eso es lo que hace que "el orden del array manda".
+
+```ts
+if (base > today) {
+  pending.forEach((item, idx) => {
+    out[item.id] = nthAvailableDay(base, Math.floor(idx / pace) + 1, config)
+  })
+}
+```
+
+**Caso "no empezó"**: es el baseline, pero contando solo los pendientes.
+
+```ts
+else if (isAvailableDay(today, config)) {
+  const doneToday = items.filter((i) => i.done && (i.doneDate ?? today) === today).length
+  const remainingToday = Math.max(0, Math.ceil(pace) - doneToday)
+  const tomorrow = nextAvailableDay(today, config)
+  pending.forEach((item, idx) => {
+    const k = idx + 1
+    out[item.id] = k <= remainingToday ? today : nthAvailableDay(tomorrow, Math.ceil((k - remainingToday) / pace), config)
+  })
+}
+```
+
+**Caso "hoy se estudia"**:
+- `doneToday` cuenta los hechos hoy. Un hecho sin `doneDate` cuenta como hoy, igual que arriba.
+- `remainingToday` es lo que queda de la cuota de hoy. El `Math.max(0, …)` es **la regla de oro**: si hiciste de más, la cuota queda en 0, no en negativo. Si fuera negativa, los pendientes se correrían para *después* de mañana.
+- Los primeros `remainingToday` pendientes van hoy. El resto se cuenta desde el próximo disponible: el pendiente `k` es el número `k − remainingToday` de "mañana en adelante", y con ritmo `pace` cae en el día `ceil((k − remainingToday) / pace)`.
+- `tomorrow` se calcula una sola vez fuera del loop.
+
+```ts
+else {
+  const next = nextAvailableDay(today, config)
+  pending.forEach((item, idx) => {
+    out[item.id] = nthAvailableDay(next, Math.floor(idx / pace) + 1, config)
+  })
+}
+return out
+```
+
+**Caso "hoy no se estudia"**: es el mismo reparto que el baseline, pero arrancando el próximo día disponible.
+
+### 7. `computePlanMetrics`
+
+```ts
+const total = items.length
+const doneItems = items.filter((i) => i.done)
+const pendingItems = items.filter((i) => !i.done)
+const done = doneItems.length
+const pending = pendingItems.length
+const shouldHaveDone = items.filter((i) => baseline[i.id] !== undefined && baseline[i.id] <= today).length
+```
+
+- `shouldHaveDone` cuenta los ítems cuya fecha del plan original ya llegó. El `!== undefined` deja afuera los ítems agregados después, que todavía no están en el baseline.
+
+```ts
+const latest = (dates: (ISODate | undefined)[]): ISODate | null =>
+  dates.reduce<ISODate | null>((max, d) => (d && (!max || d > max) ? d : max), null)
+const estimatedEnd =
+  total === 0 ? null
+  : pending > 0 ? latest(pendingItems.map((i) => projection[i.id]))
+  : latest(doneItems.map((i) => i.doneDate ?? projection[i.id]))
+```
+
+- `latest` devuelve la fecha más tardía de una lista e ignora las `undefined`.
+- Sin ítems, `null`. Con pendientes, la fecha más tardía de la proyección. Con todo hecho, la `doneDate` más tardía (o la de la proyección, si falta).
+
+```ts
+const base = maxISO(today, config.startDate)
+const daysLeft = countAvailableDays(base, config.deadline, config)
+const requiredPace = pending === 0 ? 0 : daysLeft === 0 ? null : Math.round((pending / daysLeft) * 10) / 10
+```
+
+- `requiredPace` es lo que tendrías que hacer por día para llegar justo. `Math.round(x * 10) / 10` redondea a 1 decimal. Si ya no quedan días disponibles, devuelve `null` ("Sin días").
+
+```ts
+return {
+  total, done, pending, shouldHaveDone,
+  diff: done - shouldHaveDone,
+  estimatedEnd,
+  marginDays: estimatedEnd === null ? null : diffDays(config.deadline, estimatedEnd),
+  requiredPace,
+  todayItemIds: pendingItems.filter((i) => projection[i.id] === today).map((i) => i.id),
+}
+```
+
+- `diffDays(deadline, estimatedEnd)` es positivo si terminás antes del límite.
+- `todayItemIds` sale de `pendingItems`, así que conserva el orden del plan.
+
+### Extra: planes por cantidad (`src/domain/progress.ts`)
+
+No era parte del ejercicio. Son los planes medidos en horas, páginas, etc., en lugar de una lista. Usan las mismas funciones de días y la misma regla de oro: la cuota de hoy es `max(0, ritmo − hechoHoy)`, y lo que sobra del total se reparte desde el próximo día disponible con `ceil(resto / ritmo)` días.

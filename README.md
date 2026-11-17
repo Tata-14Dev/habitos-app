@@ -20,7 +20,7 @@ I used to track habits and study plans in spreadsheets. They were fine on a lapt
 - **Daily briefing.** Today's tasks, habits, active study plans, and a mood and motivation check-in, all on one screen.
 - **Voice-dictated tasks.** Say *"dentista a las 15 horas, comprar yerba, después llamar a Juan"* with the iPhone keyboard mic and get three tasks, one of them at 15:00. The parser is rule-based. It splits on punctuation and connectors ("después", "luego", "también") and understands Spanish time phrases such as *"9 y media"*, *"3 de la tarde"*, *"18.30 hs"* and *"al mediodía"*.
 - **Habits with validity ranges.** A habit only counts on days between its start and end dates, so adding or retiring a habit doesn't distort past percentages. Includes current and best streaks, a monthly grid, and trend charts.
-- **Study plans.** Import a list of items (one per line, with optional `Module: item`), set a pace, rest weekdays, and blocked dates, and track milestones. A plan can be linked to a habit, which is marked done automatically on any day you complete an item.
+- **Study plans that reschedule themselves.** Two kinds: **item plans** (a list of rooms, lessons, or chapters, pasted one per line with optional `Module: item`) and **amount plans** (a total of hours, pages, or exercises, logged per day). Set a pace, rest weekdays, blocked dates, and a deadline. Every check-off recalculates the projected finish date, how far ahead or behind you are, and the pace you need. A plan can be linked to a habit that is marked done on any day you make progress.
 - **Offline-first PWA.** The whole app is precached by a Workbox service worker. Every write goes to IndexedDB first, so the app never waits on the network.
 - **Multi-device sync.** Email and password auth with Supabase, plus last-write-wins conflict resolution.
 - **Morning push reminder.** Web Push to the installed iOS PWA, scheduled with `pg_cron` and sent by a Supabase Edge Function in each user's local time zone.
@@ -57,13 +57,15 @@ flowchart LR
 - **Soft deletes.** `deletedAt` tombstones propagate deletions across devices.
 - **Row Level Security.** One policy, `user_id = auth.uid()`, isolates each user's data. The client only ever holds the publishable key.
 - **Dates as local `YYYY-MM-DD` strings.** Days are never stored as UTC timestamps, which avoids the classic "habit marked on the wrong day after 9 p.m." bug in UTC−3.
-- **Pure, tested domain layer.** Percentages, streaks, the dictation parser, item-list parsing, and the reminder logic are plain TypeScript with no React or I/O, covered by Vitest.
+- **Pure, tested domain layer.** Scheduling, percentages, streaks, the dictation parser, item-list parsing, and the reminder logic are plain TypeScript with no React or I/O, covered by Vitest.
 
-## Scheduling engine (in progress)
+## Scheduling engine
 
-The core of the study planner is `src/domain/schedule.ts`. It counts available days given rest weekdays and blocked dates, builds a baseline schedule, projects a new one from today based on actual progress, and computes metrics such as days ahead or behind and the projected finish date.
+The core of the study planner is `src/domain/schedule.ts` (item plans) and `src/domain/progress.ts` (amount plans). They count available days given rest weekdays and blocked dates, build a baseline schedule, project a new one from today based on actual progress, and compute metrics: days ahead or behind, projected finish date, margin to the deadline, and required pace.
 
-I'm implementing this module **by hand, test-first**, as a deliberate exercise in algorithmic thinking. The specification already exists as **57 Vitest tests** (`src/domain/schedule.test.ts`), and a design guide with edge cases is in [`docs/GUIA_REPROGRAMACION.md`](docs/GUIA_REPROGRAMACION.md). Until each function is done, the UI catches `NotImplementedError` and shows a friendly "pending" notice instead of crashing.
+One rule drives the projection: **doing extra never pushes work forward.** Today's quota is `max(0, pace − doneToday)`, so finishing 3 lessons on a 1-a-day plan moves the next lesson to *tomorrow* (not three days out) and pulls the finish date closer.
+
+The engine was specified **test-first**: 57 Vitest tests and a design guide with edge cases ([`docs/GUIA_REPROGRAMACION.md`](docs/GUIA_REPROGRAMACION.md)) were written before any implementation. The guide also walks through the final solution line by line.
 
 ## Tech stack
 
@@ -80,7 +82,7 @@ I'm implementing this module **by hand, test-first**, as a deliberate exercise i
 ## Project structure
 
 ```
-src/domain     pure logic: dates, habits, tasks (dictation parser), plans, schedule
+src/domain     pure logic: dates, habits, tasks (dictation parser), plans, schedule, progress
 src/data       Dexie schema, outbox store, sync engine, repository, backup, push subscription
 src/ui         screens and components
 src/charts     Recharts wrappers
@@ -105,11 +107,11 @@ To enable sync and push, copy `.env.example` to `.env.local` and fill in your Su
 
 ## How it was built
 
-I built this with an AI pair programmer (Claude Code) under an explicit working agreement, documented in [`CLAUDE.md`](CLAUDE.md). The AI handled the scaffolding, UI, and data and sync layers. The scheduling engine is mine to write, and the AI's role there is limited to hints and code review.
+I built this with an AI pair programmer (Claude Code) under an explicit working agreement, documented in [`CLAUDE.md`](CLAUDE.md). I defined the product, the requirements, and the scheduling rules. The AI implemented the code, with each module covered by tests. The scheduling engine started as a hands-on exercise for me (the spec and guide were written for that) and was later completed with the AI, with every function explained line by line in the guide.
 
 ## Roadmap
 
-- Finish the scheduling engine, then a burn-up chart per plan (baseline vs. actual vs. projection)
+- Burn-up chart per plan (baseline vs. actual vs. projection)
 - Yearly overview (`yearStats` is already implemented and tested)
 - CSV export
 - Realtime sync with Supabase Realtime instead of polling

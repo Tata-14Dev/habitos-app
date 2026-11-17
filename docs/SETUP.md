@@ -7,22 +7,17 @@ PWA para el teléfono y la computadora con:
 
 Funciona offline, sincroniza con Supabase y manda un recordatorio a la mañana.
 
-## 🎓 Tu ejercicio: empezá por acá
+## Planes y reprogramación
 
-La reprogramación de los planes la implementás vos.
+Hay dos tipos de plan. Lo elegís al crearlo, en **Planes → + Nuevo**:
+- **📋 Por ítems:** una lista (rooms, lecciones, capítulos). Marcás cada ítem cuando lo terminás.
+- **⏱️ Por cantidad:** un total (horas, páginas, ejercicios). Registrás cuánto hiciste cada día con los botones rápidos (+2 horas, +1 hora…) o con una cantidad a mano.
 
-1. Abrí [`src/domain/schedule.ts`](../src/domain/schedule.ts). Tiene 7 funciones que hoy solo hacen `throw new NotImplementedError(...)`.
-2. Leé la guía: [`docs/GUIA_REPROGRAMACION.md`](GUIA_REPROGRAMACION.md). Tiene el orden sugerido, los casos borde y pistas en 3 niveles.
-3. Corré los tests:
-   ```bash
-   npm test -- schedule                      # los 57 del ejercicio (hoy en rojo)
-   npm test -- schedule -t "isAvailableDay"  # una función
-   npm run test:watch -- schedule            # se re-corren al guardar
-   ```
-   > En Windows usá `npm test --` y no `npx vitest` (ver la nota en la guía).
-4. Mientras implementás, la app muestra "🛠️ Pendiente: implementá `X`" donde hace falta. Cuando termines, marcá 3 rooms hoy y fijate cómo se adelanta la fecha de fin.
+En los dos casos, la fecha de fin, el margen y el ritmo necesario se recalculan con cada avance. Hacer de más adelanta el fin y nunca corre hacia adelante lo que te toca mañana.
 
-Las reglas del modo tutor están en [`CLAUDE.md`](../CLAUDE.md).
+- La lógica está en [`src/domain/schedule.ts`](../src/domain/schedule.ts) (planes por ítems) y [`src/domain/progress.ts`](../src/domain/progress.ts) (planes por cantidad).
+- La guía [`GUIA_REPROGRAMACION.md`](GUIA_REPROGRAMACION.md) tiene los casos borde y, en "Soluciones", cada función explicada línea por línea.
+- Tests: `npm test -- schedule` (57) y `npm test -- progress`.
 
 ## Correrla en la compu
 

@@ -1,7 +1,7 @@
 # Ideas (no implementadas: anotadas para decidir después)
 
 - **Panel anual** (fase 2): tarjetas por mes y gráfico de área. `yearStats` ya está hecho y testeado en `src/domain/habits.ts`; falta la pantalla.
-- **Burn-up del plan** (fase 2): plan original acumulado (gris punteado), real (verde) y proyección (verde claro). Necesita tu `projectSchedule`.
+- **Burn-up del plan** (fase 2): plan original acumulado (gris punteado), real (verde) y proyección (verde claro). `projectSchedule` y `computeAmountMetrics` ya están, falta el gráfico.
 - **Exportar a CSV** la grilla de hábitos y los ítems de un plan (fase 2 del brief).
 - **Dictado con IA** (opcional): hoy el separador es por reglas. Con un modelo se podrían detectar fechas ("mañana", "el jueves") y agrupar mejor.
 - **Login con Google** para la compu (en el iPhone instalado conviene seguir con mail y contraseña).

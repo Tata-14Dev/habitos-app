@@ -1,103 +1,121 @@
 # Hábitos
 
-PWA para el teléfono y la computadora con:
-- hábitos (vigencia, porcentajes, rachas, ánimo y motivación);
-- tareas del día dictadas por voz;
-- planes de estudio que se reprograman en tiempo real.
+**A local-first habit tracker and study planner for phone and desktop.** It's an installable PWA that works fully offline, syncs between devices through Supabase, and sends a morning push notification to your iPhone.
 
-Funciona offline, sincroniza con Supabase y manda un recordatorio a la mañana.
+> 🇦🇷 [Leer en español](README.es.md) · The app's UI is in Argentine Spanish.
 
-## 🎓 Tu ejercicio: empezá por acá
+<p align="center">
+  <img src="docs/screenshots/today.png" width="210" alt="Today screen: dictated tasks parsed into a list">
+  <img src="docs/screenshots/habits.png" width="210" alt="Habits with current and best streaks">
+  <img src="docs/screenshots/month.png" width="210" alt="Monthly habit grid">
+  <img src="docs/screenshots/charts.png" width="210" alt="Per-habit percentages and daily progress chart">
+</p>
 
-La reprogramación de los planes la implementás vos.
+## Why I built it
 
-1. Abrí [`src/domain/schedule.ts`](src/domain/schedule.ts). Tiene 7 funciones que hoy solo hacen `throw new NotImplementedError(...)`.
-2. Leé la guía: [`docs/GUIA_REPROGRAMACION.md`](docs/GUIA_REPROGRAMACION.md). Tiene el orden sugerido, los casos borde y pistas en 3 niveles.
-3. Corré los tests:
-   ```bash
-   npm test -- schedule                      # los 57 del ejercicio (hoy en rojo)
-   npm test -- schedule -t "isAvailableDay"  # una función
-   npm run test:watch -- schedule            # se re-corren al guardar
-   ```
-   > En Windows usá `npm test --` y no `npx vitest` (ver la nota en la guía).
-4. Mientras implementás, la app muestra "🛠️ Pendiente: implementá `X`" donde hace falta. Cuando termines, marcá 3 rooms hoy y fijate cómo se adelanta la fecha de fin.
+I used to track habits and study plans in spreadsheets. They were fine on a laptop, but painful on a phone. They also couldn't answer the question I cared about most: *"If I study 3 lessons today, when do I finish?"* This app replaces those spreadsheets with something I open every morning.
 
-Las reglas del modo tutor están en [`CLAUDE.md`](CLAUDE.md).
+## Features
 
-## Correrla en la compu
+- **Daily briefing.** Today's tasks, habits, active study plans, and a mood and motivation check-in, all on one screen.
+- **Voice-dictated tasks.** Say *"dentista a las 15 horas, comprar yerba, después llamar a Juan"* with the iPhone keyboard mic and get three tasks, one of them at 15:00. The parser is rule-based. It splits on punctuation and connectors ("después", "luego", "también") and understands Spanish time phrases such as *"9 y media"*, *"3 de la tarde"*, *"18.30 hs"* and *"al mediodía"*.
+- **Habits with validity ranges.** A habit only counts on days between its start and end dates, so adding or retiring a habit doesn't distort past percentages. Includes current and best streaks, a monthly grid, and trend charts.
+- **Study plans.** Import a list of items (one per line, with optional `Module: item`), set a pace, rest weekdays, and blocked dates, and track milestones. A plan can be linked to a habit, which is marked done automatically on any day you complete an item.
+- **Offline-first PWA.** The whole app is precached by a Workbox service worker. Every write goes to IndexedDB first, so the app never waits on the network.
+- **Multi-device sync.** Email and password auth with Supabase, plus last-write-wins conflict resolution.
+- **Morning push reminder.** Web Push to the installed iOS PWA, scheduled with `pg_cron` and sent by a Supabase Edge Function in each user's local time zone.
+- **Backup.** Export and import of all data as JSON.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph Device["Device (PWA)"]
+    UI["React UI<br/>src/ui"] --> Repo["Repository<br/>src/data/repo.ts"]
+    Domain["Pure domain logic<br/>src/domain"] -.-> UI
+    Repo --> Dexie[("IndexedDB<br/>Dexie")]
+    Repo --> Outbox[("Outbox")]
+    Sync["Sync engine<br/>src/data/sync.ts"] --> Outbox
+    Sync --> Dexie
+    SW["Service worker<br/>offline + push"]
+  end
+  subgraph Supabase
+    RPC["push_records()<br/>LWW upsert"] --> Records[("records<br/>RLS per user")]
+    Cron["pg_cron"] --> Edge["Edge Function<br/>send-reminders"]
+  end
+  Sync -- "push (batched)" --> RPC
+  Sync -- "pull since cursor" --> Records
+  Edge -- "Web Push" --> SW
+```
+
+### Interesting decisions
+
+- **Local-first with an outbox.** The UI never talks to the network. Each write stamps `updatedAt` and adds the record to an outbox in the same Dexie transaction. A sync engine drains the outbox in batches: after each change (debounced), on app start, when the device comes back online, when the app returns to the foreground, and once a minute while it's visible.
+- **One generic table on the server.** Every local collection maps to a row in `records(user_id, collection, id, data jsonb, updated_at, deleted_at, server_ts)`. Adding a new collection needs no migration.
+- **Last-write-wins enforced in SQL.** `push_records()` runs a single `INSERT … ON CONFLICT DO UPDATE … WHERE excluded.updated_at > r.updated_at`, so the server rejects stale writes. Client timestamps are strictly increasing, which means two writes in the same millisecond never tie.
+- **Server clock for pull cursors.** Device clocks drift, so pulls use a server-side `server_ts` (`clock_timestamp()`) plus a small overlap window instead of the client's `updatedAt`.
+- **Soft deletes.** `deletedAt` tombstones propagate deletions across devices.
+- **Row Level Security.** One policy, `user_id = auth.uid()`, isolates each user's data. The client only ever holds the publishable key.
+- **Dates as local `YYYY-MM-DD` strings.** Days are never stored as UTC timestamps, which avoids the classic "habit marked on the wrong day after 9 p.m." bug in UTC−3.
+- **Pure, tested domain layer.** Percentages, streaks, the dictation parser, item-list parsing, and the reminder logic are plain TypeScript with no React or I/O, covered by Vitest.
+
+## Scheduling engine (in progress)
+
+The core of the study planner is `src/domain/schedule.ts`. It counts available days given rest weekdays and blocked dates, builds a baseline schedule, projects a new one from today based on actual progress, and computes metrics such as days ahead or behind and the projected finish date.
+
+I'm implementing this module **by hand, test-first**, as a deliberate exercise in algorithmic thinking. The specification already exists as **57 Vitest tests** (`src/domain/schedule.test.ts`), and a design guide with edge cases is in [`docs/GUIA_REPROGRAMACION.md`](docs/GUIA_REPROGRAMACION.md). Until each function is done, the UI catches `NotImplementedError` and shows a friendly "pending" notice instead of crashing.
+
+## Tech stack
+
+| Layer | Tools |
+|---|---|
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS 4, React Router |
+| Local data | IndexedDB via Dexie (`dexie-react-hooks` for live queries) |
+| Backend | Supabase: Postgres, Auth, RLS, Edge Functions (Deno), `pg_cron` |
+| PWA | `vite-plugin-pwa` (injectManifest), Workbox, Web Push (VAPID) |
+| Charts and UI | Recharts, dnd-kit (drag-to-reorder) |
+| Testing | Vitest + `fake-indexeddb` (domain, store, sync), Playwright (end-to-end on an emulated iPhone) |
+| Hosting | Vercel |
+
+## Project structure
+
+```
+src/domain     pure logic: dates, habits, tasks (dictation parser), plans, schedule
+src/data       Dexie schema, outbox store, sync engine, repository, backup, push subscription
+src/ui         screens and components
+src/charts     Recharts wrappers
+src/sw.ts      service worker: offline precache + push notifications
+supabase/      SQL migrations, send-reminders Edge Function, cron setup
+e2e/           Playwright smoke test
+```
+
+## Running it locally
 
 ```bash
 npm install
-cp .env.example .env.local   # completá las claves (ver "Sincronización"); sin claves funciona solo en local
-npm run dev                  # http://localhost:5173
+npm run dev          # http://localhost:5173 (works without any keys: local-only mode)
+npm test             # Vitest
+npm run e2e          # Playwright (emulated iPhone 13)
+npm run build        # production build with service worker
 ```
 
-| Comando | Qué hace |
-|---|---|
-| `npm test` | Tests de dominio y datos (Vitest) |
-| `npm run e2e` | Prueba end-to-end (Playwright, simula un iPhone) |
-| `npm run build` / `npm run preview` | Build de producción con service worker |
-| `npm run vapid` | Genera las claves para las notificaciones push |
+To enable sync and push, copy `.env.example` to `.env.local` and fill in your Supabase URL, publishable key, and VAPID public key. The full guide covers the Supabase setup, migrations, the Edge Function, cron, the Vercel deploy, and installing on an iPhone. It's in Spanish: [`docs/SETUP.md`](docs/SETUP.md).
 
-**Cargar el ejemplo:** en Planes → "Cargar ejemplo", o en Ajustes → "🧪 Cargar ejemplo". Crea el plan SOC Level 1 con 34 rooms, días libres, las 8 etapas y el hábito "Estudiar SOC" vinculado.
+> **Windows note:** use `npm test`, not `npx vitest`. A wrapper script fixes a drive-letter casing issue that makes Vitest load the suite twice.
 
-## Sincronización (Supabase): una sola vez
+## How it was built
 
-1. Creá un proyecto en [supabase.com](https://supabase.com) (región São Paulo).
-2. **Authentication → Providers → Email:** desactivá **Confirm email**. Así no se manda ningún mail al crear la cuenta.
-3. **Project Settings → API:** copiá la URL y la `anon` key en `.env.local` (`VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`).
-4. Aplicá las migraciones. Pegá el contenido de `supabase/migrations/*.sql`, en orden, en el **SQL Editor**, o usá el CLI:
-   ```bash
-   npx supabase login
-   npx supabase link --project-ref <ref>
-   npx supabase db push
-   ```
-5. En la app: Ajustes → **Crear cuenta** (mail y contraseña). En el otro dispositivo, **Iniciar sesión** con la misma cuenta.
+I built this with an AI pair programmer (Claude Code) under an explicit working agreement, documented in [`CLAUDE.md`](CLAUDE.md). The AI handled the scaffolding, UI, and data and sync layers. The scheduling engine is mine to write, and the AI's role there is limited to hints and code review.
 
-Cómo funciona: todo se guarda primero en el dispositivo (IndexedDB) y se sube cuando hay internet. Si el mismo registro se cambió en dos dispositivos, gana el último cambio.
+## Roadmap
 
-## Recordatorio de la mañana (push): una sola vez
+- Finish the scheduling engine, then a burn-up chart per plan (baseline vs. actual vs. projection)
+- Yearly overview (`yearStats` is already implemented and tested)
+- CSV export
+- Realtime sync with Supabase Realtime instead of polling
 
-1. `npm run vapid`. Copiá `VITE_VAPID_PUBLIC_KEY` a `.env.local` (y a Vercel).
-2. Cargá los secretos en Supabase. Inventá un `CRON_SECRET` largo cualquiera y usá tu mail en `VAPID_SUBJECT`:
-   ```bash
-   npx supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:tu@mail.com CRON_SECRET=...
-   npx supabase functions deploy send-reminders --no-verify-jwt
-   ```
-3. Abrí `supabase/cron.example.sql`, reemplazá `<TU-PROYECTO>` y `<TU-CRON-SECRET>`, y corrélo en el SQL Editor.
-4. En el iPhone, con la app **instalada**: Ajustes → "🔔 Activar en este dispositivo".
+More ideas are in [`IDEAS.md`](IDEAS.md).
 
-Para probar sin esperar a la mañana:
-```bash
-curl -X POST "https://<proyecto>.supabase.co/functions/v1/send-reminders?force=1" -H "x-cron-secret: <TU-CRON-SECRET>"
-```
+## License
 
-## Publicarla (Vercel) e instalarla en el iPhone
-
-1. Subí el repo a GitHub y en [vercel.com](https://vercel.com) → **Add New Project** → importalo. Vercel detecta Vite solo.
-2. En **Settings → Environment Variables**, cargá `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` y `VITE_VAPID_PUBLIC_KEY`, y hacé un redeploy.
-3. En el iPhone: abrí la URL en **Safari** → botón **Compartir** → **Agregar a pantalla de inicio**. Abrila siempre desde ese ícono.
-4. Iniciá sesión y activá el recordatorio.
-
-> El iPhone necesita HTTPS para instalar la app, para el modo offline y para las notificaciones. Por eso, para usarla en el teléfono, usá la URL de Vercel y no `http://192.168.x.x`. La red local sirve para ver la interfaz (`npm run dev` y abrir la IP que muestra), pero ahí no funcionan ni la instalación ni el push.
-
-## Dictado de tareas
-
-En **Hoy** → "🎤 Dictá tu día", tocá el micrófono del teclado del iPhone y hablá:
-
-> "dentista a las 15 horas, comprar yerba, después llamar a Juan"
-
-La app lo separa en tareas: **15:00 Dentista**, **Comprar yerba** y **Llamar a Juan**. Separa por comas, puntos, "después", "luego" y "también". Entiende horas como "a las 9 y media", "3 de la tarde", "18.30 hs" y "al mediodía". Antes de agregar las tareas te muestra cómo las entendió.
-
-## Estructura
-
-```
-src/domain   lógica pura y testeada: fechas, hábitos, tareas, planes y TU schedule.ts
-src/data     Dexie, store con outbox, sincronización, repositorio, respaldo, ejemplo y push
-src/ui       pantallas y componentes (React + Tailwind)
-src/charts   gráficos (Recharts)
-src/sw.ts    service worker: modo offline y notificaciones
-supabase/    migraciones SQL, la Edge Function send-reminders y el cron
-docs/        guía del ejercicio
-e2e/         prueba end-to-end
-```
+[MIT](LICENSE)

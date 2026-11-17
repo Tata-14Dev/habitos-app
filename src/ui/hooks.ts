@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { todayISO, type ISODate } from '../domain/dates'
+import { linkedHabitDays, linkedHabitLogDays } from '../domain/habits'
 import { db } from '../data/db'
 import { getSyncState, subscribeSync } from '../data/sync'
 import { DEFAULT_SETTINGS, type Settings } from '../data/types'
@@ -58,6 +59,36 @@ export function usePlanItems(planId: string | undefined) {
       planId ? alive(await db.planItems.where('planId').equals(planId).toArray()).sort((a, b) => a.order - b.order) : [],
     [planId],
   )
+}
+
+export function usePlanLogs(planId: string | undefined) {
+  return useLiveQuery(
+    async () =>
+      planId ? alive(await db.planLogs.where('planId').equals(planId).toArray()).sort((a, b) => a.date.localeCompare(b.date)) : [],
+    [planId],
+  )
+}
+
+/**
+ * Derived done-days for habits linked to a plan: a day counts if an item was done (item plans)
+ * or some progress was logged (amount plans). habitId → days.
+ */
+export function useLinkedHabitDays(): Record<string, Set<ISODate>> | undefined {
+  const plans = usePlans()
+  const items = useAllPlanItems()
+  const logs = useLiveQuery(async () => alive(await db.planLogs.toArray()), [])
+  return useMemo(() => {
+    if (!plans || !items || !logs) return undefined
+    const derived: Record<string, Set<ISODate>> = {}
+    for (const p of plans) {
+      if (!p.linkedHabitId) continue
+      derived[p.linkedHabitId] =
+        p.kind === 'amount'
+          ? linkedHabitLogDays(logs.filter((l) => l.planId === p.id))
+          : linkedHabitDays(items.filter((i) => i.planId === p.id))
+    }
+    return derived
+  }, [plans, items, logs])
 }
 
 /** All plan items (any plan) — used for linked habits. */

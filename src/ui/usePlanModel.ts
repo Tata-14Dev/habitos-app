@@ -8,7 +8,8 @@ import { safeCall, type Safe } from '../domain/errors'
 import { toScheduleConfig, toScheduleItems } from '../domain/plans'
 import { computePlanMetrics, projectSchedule, type DateMap, type PlanMetrics } from '../domain/schedule'
 import { ensureBaseline, saveProjection } from '../data/repo'
-import type { Plan, PlanItem } from '../data/types'
+import { computeAmountMetrics, type AmountPlanMetrics } from '../domain/progress'
+import type { Plan, PlanItem, PlanLog } from '../data/types'
 
 export interface PlanModel {
   projection: Safe<DateMap>
@@ -53,4 +54,12 @@ export function usePlanModel(plan: Plan | undefined, items: PlanItem[] | undefin
   }, [plan, model, today])
 
   return model
+}
+
+/** Metrics for an amount plan (hours, pages…). Pure: see `src/domain/progress.ts`. */
+export function useAmountModel(plan: Plan | undefined, logs: PlanLog[] | undefined, today: ISODate): Safe<AmountPlanMetrics> | undefined {
+  return useMemo(() => {
+    if (!plan || !logs) return undefined
+    return safeCall(() => computeAmountMetrics(plan.target ?? 0, logs, toScheduleConfig(plan), today))
+  }, [plan, logs, today])
 }

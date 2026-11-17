@@ -22,6 +22,8 @@ export async function loadExample(): Promise<boolean> {
 
   const plan = await createPlan({
     name: EXAMPLE_PLAN_NAME,
+    kind: 'items',
+    unit: 'rooms',
     startDate: '2026-11-16',
     deadline: '2026-12-20',
     pace: 1,

@@ -22,6 +22,7 @@ export class HabitosDB extends Dexie {
   dayMoods!: Table<CollectionMap['dayMoods'], string>
   plans!: Table<CollectionMap['plans'], string>
   planItems!: Table<CollectionMap['planItems'], string>
+  planLogs!: Table<CollectionMap['planLogs'], string>
   milestones!: Table<CollectionMap['milestones'], string>
   projections!: Table<CollectionMap['projections'], string>
   tasks!: Table<CollectionMap['tasks'], string>
@@ -45,6 +46,10 @@ export class HabitosDB extends Dexie {
       pushSubscriptions: 'id',
       outbox: 'key, collection',
       meta: 'key',
+    })
+    // v2: amount plans (hours, pages…) log progress per day.
+    this.version(2).stores({
+      planLogs: 'id, planId, date, updatedAt',
     })
   }
 

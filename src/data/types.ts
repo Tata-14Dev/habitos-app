@@ -34,8 +34,20 @@ export interface DayMood extends SyncFields {
   motivation?: number
 }
 
+/**
+ * - `items`: an ordered list of things to finish (rooms, lessons, chapters). Pace = items per day.
+ * - `amount`: a total quantity (hours, pages, exercises) logged per day. Pace = units per day.
+ */
+export type PlanKind = 'items' | 'amount'
+
 export interface Plan extends SyncFields {
   name: string
+  /** Missing on plans created before amount plans existed → 'items'. */
+  kind?: PlanKind
+  /** Display unit: "rooms", "horas", "páginas"… Optional for item plans. */
+  unit?: string
+  /** Amount plans only: total to reach. */
+  target?: number
   startDate: ISODate
   deadline: ISODate
   pace: number
@@ -55,6 +67,13 @@ export interface PlanItem extends SyncFields {
   order: number
   done: boolean
   doneDate?: ISODate
+}
+
+/** Amount plans: how much was done on a day (id === `${planId}|${date}`, one record per plan and day). */
+export interface PlanLog extends SyncFields {
+  planId: string
+  date: ISODate
+  amount: number
 }
 
 /** Last projection computed on a device (id === planId). The server reads it for "Hoy toca: Room 12". */
@@ -103,6 +122,7 @@ export interface CollectionMap {
   dayMoods: DayMood
   plans: Plan
   planItems: PlanItem
+  planLogs: PlanLog
   milestones: Milestone
   projections: PlanProjection
   tasks: Task
@@ -118,6 +138,7 @@ export const COLLECTIONS: CollectionName[] = [
   'dayMoods',
   'plans',
   'planItems',
+  'planLogs',
   'milestones',
   'projections',
   'tasks',

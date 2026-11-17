@@ -1,31 +1,26 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { buildDoneLookup, dayRatio, formatPct, isHabitActive, linkedHabitDays, mentalState } from '../../domain/habits'
+import { buildDoneLookup, dayRatio, formatPct, isHabitActive, mentalState } from '../../domain/habits'
 import { marginLabel } from '../../domain/plans'
 import { formatTask, parseDictation, sortTasks } from '../../domain/tasks'
 import { addTasksFromText, deleteTask, setHabitDone, setItemDone, setMood, updateTask } from '../../data/repo'
 import type { Plan, PlanItem } from '../../data/types'
 import { Button, Card, Check, cx, Empty, inputCls, PendingNotice, ProgressBar, Scale, SectionTitle } from '../components'
 import { longDay } from '../format'
-import { useAllPlanItems, useDayMoods, useHabitLogs, useHabits, usePlanItems, usePlans, useTasks, useToday } from '../hooks'
+import { useDayMoods, useHabitLogs, useHabits, usePlanItems, usePlans, useTasks, useToday, useLinkedHabitDays } from '../hooks'
 import { usePlanModel } from '../usePlanModel'
+import { AmountToday } from './AmountPlan'
 
 export function TodayScreen() {
   const today = useToday()
   const habits = useHabits()
   const logs = useHabitLogs(today, today)
-  const allItems = useAllPlanItems()
   const plans = usePlans()
   const tasks = useTasks(today)
   const mood = useDayMoods(today, today)?.[0]
 
-  const isDone = useMemo(() => {
-    const derived: Record<string, Set<string>> = {}
-    for (const p of plans ?? []) {
-      if (p.linkedHabitId) derived[p.linkedHabitId] = linkedHabitDays((allItems ?? []).filter((i) => i.planId === p.id))
-    }
-    return buildDoneLookup(logs ?? [], derived)
-  }, [logs, plans, allItems])
+  const linkedDays = useLinkedHabitDays()
+  const isDone = useMemo(() => buildDoneLookup(logs ?? [], linkedDays ?? {}), [logs, linkedDays])
 
   const todayHabits = (habits ?? []).filter((h) => isHabitActive(h, today))
   const ratio = dayRatio(habits ?? [], today, isDone)
@@ -84,7 +79,11 @@ export function TodayScreen() {
                   <span className="flex-1 text-base">
                     {h.emoji && <span className="mr-1">{h.emoji}</span>}
                     {h.name}
-                    {linked && <span className="block text-xs text-ink-soft">Se marca solo al hacer un ítem de {linked.name}</span>}
+                    {linked && (
+                      <span className="block text-xs text-ink-soft">
+                        Se marca solo al {linked.kind === 'amount' ? 'registrar avance en' : 'hacer un ítem de'} {linked.name}
+                      </span>
+                    )}
                   </span>
                 </li>
               )
@@ -93,9 +92,9 @@ export function TodayScreen() {
         )}
       </Card>
 
-      {(plans ?? []).map((p) => (
-        <PlanToday key={p.id} plan={p} today={today} />
-      ))}
+      {(plans ?? []).map((p) =>
+        p.kind === 'amount' ? <AmountToday key={p.id} plan={p} today={today} /> : <PlanToday key={p.id} plan={p} today={today} />,
+      )}
 
       <Card>
         <SectionTitle right={<span className="text-sm text-ink-soft">Estado mental: {fmtMental(mentalState(mood))}</span>}>

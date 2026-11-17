@@ -15,6 +15,7 @@ import {
   type Milestone,
   type Plan,
   type PlanItem,
+  type PlanKind,
   type Settings,
   type Task,
 } from './types'
@@ -61,12 +62,16 @@ export async function setMood(date: ISODate, values: { mood?: number; motivation
 
 export interface PlanInput {
   name: string
+  kind: PlanKind
+  unit?: string
+  /** Amount plans: total to reach. */
+  target?: number
   startDate: ISODate
   deadline: ISODate
   pace: number
   restWeekdays: number[]
   blockedDates: ISODate[]
-  /** Create a linked habit "Estudiar <name>" that counts as done when an item is marked. */
+  /** Create a linked habit "Estudiar <name>" that counts as done on days with progress. */
   withHabit: boolean
   itemsText?: string
 }
@@ -81,6 +86,9 @@ export async function createPlan(input: PlanInput): Promise<Plan> {
   const plan = await store.put('plans', {
     id: planId,
     name: input.name,
+    kind: input.kind,
+    unit: input.unit,
+    target: input.kind === 'amount' ? input.target : undefined,
     startDate: input.startDate,
     deadline: input.deadline,
     pace: input.pace,
@@ -101,7 +109,9 @@ export async function updatePlan(id: string, changes: Partial<Plan>) {
 export async function deletePlan(id: string) {
   const items = await db.planItems.where('planId').equals(id).primaryKeys()
   const milestones = await db.milestones.where('planId').equals(id).primaryKeys()
+  const logs = await db.planLogs.where('planId').equals(id).primaryKeys()
   await store.softDelete('planItems', items)
+  await store.softDelete('planLogs', logs)
   await store.softDelete('milestones', milestones)
   await store.softDelete('plans', [id])
 }
@@ -180,6 +190,26 @@ export async function saveProjection(planId: string, dates: Record<string, ISODa
   const current = await db.projections.get(planId)
   if (current && current.computedOn === today && JSON.stringify(current.dates) === JSON.stringify(dates)) return
   await store.put('projections', { id: planId, planId, computedOn: today, dates })
+}
+
+// ─── Amount plans: daily log ────────────────────────────────────────────────
+
+/** Sets how much was done on `date` (0 removes the day). One record per plan and day. */
+export async function setPlanLog(planId: string, date: ISODate, amount: number) {
+  const id = `${planId}|${date}`
+  const value = Math.max(0, Math.round(amount * 100) / 100)
+  if (value === 0) {
+    if (await db.planLogs.get(id)) await store.softDelete('planLogs', [id])
+    return
+  }
+  await store.put('planLogs', { id, planId, date, amount: value })
+}
+
+/** Adds `delta` (can be negative) to what was logged on `date`. */
+export async function addToPlanLog(planId: string, date: ISODate, delta: number) {
+  const current = await db.planLogs.get(`${planId}|${date}`)
+  const base = current && !current.deletedAt ? current.amount : 0
+  await setPlanLog(planId, date, base + delta)
 }
 
 // ─── Milestones ─────────────────────────────────────────────────────────────

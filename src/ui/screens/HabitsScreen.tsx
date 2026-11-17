@@ -1,29 +1,22 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { formatAR, yearMonth } from '../../domain/dates'
-import { buildDoneLookup, habitStreaks, isHabitActive, linkedHabitDays } from '../../domain/habits'
+import { buildDoneLookup, habitStreaks, isHabitActive } from '../../domain/habits'
 import { deleteHabit, reorderHabits, saveHabit } from '../../data/repo'
 import type { Habit } from '../../data/types'
 import { Button, Card, Empty, Field, inputCls, SectionTitle, Sheet } from '../components'
-import { useAllHabitLogs, useAllPlanItems, useHabits, usePlans, useToday } from '../hooks'
+import { useAllHabitLogs, useHabits, useToday, useLinkedHabitDays } from '../hooks'
 import { SortableList } from '../Sortable'
 
 export function HabitsScreen() {
   const today = useToday()
   const habits = useHabits()
   const logs = useAllHabitLogs()
-  const plans = usePlans()
-  const items = useAllPlanItems()
   const [editing, setEditing] = useState<Partial<Habit> | null>(null)
   const { year, month } = yearMonth(today)
 
-  const isDone = useMemo(() => {
-    const derived: Record<string, Set<string>> = {}
-    for (const p of plans ?? []) {
-      if (p.linkedHabitId) derived[p.linkedHabitId] = linkedHabitDays((items ?? []).filter((i) => i.planId === p.id))
-    }
-    return buildDoneLookup(logs ?? [], derived)
-  }, [logs, plans, items])
+  const linkedDays = useLinkedHabitDays()
+  const isDone = useMemo(() => buildDoneLookup(logs ?? [], linkedDays ?? {}), [logs, linkedDays])
 
   return (
     <div className="space-y-4">

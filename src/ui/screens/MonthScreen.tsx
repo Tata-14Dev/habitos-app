@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { monthRange, weekday, yearMonth } from '../../domain/dates'
-import { buildDoneLookup, formatPct, isHabitActive, linkedHabitDays, mentalState, monthStats } from '../../domain/habits'
+import { buildDoneLookup, formatPct, isHabitActive, mentalState, monthStats } from '../../domain/habits'
 import { setHabitDone } from '../../data/repo'
 import { AreaTrend } from '../../charts/AreaTrend'
 import { Card, cx, Empty, ProgressBar, SectionTitle } from '../components'
 import { monthLabel, WEEKDAY_SHORT } from '../format'
-import { useAllPlanItems, useDayMoods, useHabitLogs, useHabits, usePlans, useSettings, useToday } from '../hooks'
+import { useDayMoods, useHabitLogs, useHabits, useSettings, useToday, useLinkedHabitDays } from '../hooks'
 
 export function MonthScreen() {
   const today = useToday()
@@ -19,17 +19,10 @@ export function MonthScreen() {
   const habits = useHabits()
   const logs = useHabitLogs(from, to)
   const moods = useDayMoods(from, to)
-  const plans = usePlans()
-  const items = useAllPlanItems()
   const { weekStartsMonday } = useSettings()
 
-  const isDone = useMemo(() => {
-    const derived: Record<string, Set<string>> = {}
-    for (const p of plans ?? []) {
-      if (p.linkedHabitId) derived[p.linkedHabitId] = linkedHabitDays((items ?? []).filter((i) => i.planId === p.id))
-    }
-    return buildDoneLookup(logs ?? [], derived)
-  }, [logs, plans, items])
+  const linkedDays = useLinkedHabitDays()
+  const isDone = useMemo(() => buildDoneLookup(logs ?? [], linkedDays ?? {}), [logs, linkedDays])
 
   const stats = useMemo(() => monthStats(habits ?? [], year, month, isDone, today), [habits, year, month, isDone, today])
   const monthHabits = (habits ?? []).filter((h) => stats.days.some((d) => isHabitActive(h, d.date)))

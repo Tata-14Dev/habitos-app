@@ -8,6 +8,7 @@ import type { Plan } from '../../data/types'
 import { Button, Card, Empty, ProgressBar, SectionTitle, Sheet } from '../components'
 import { usePlanItems, usePlans, useToday } from '../hooks'
 import { usePlanModel } from '../usePlanModel'
+import { AmountSummary } from './AmountPlan'
 import { PlanForm } from './PlanForm'
 
 export function PlansScreen() {
@@ -51,20 +52,28 @@ export function PlansScreen() {
 
 function PlanCard({ plan }: { plan: Plan }) {
   const today = useToday()
-  const items = usePlanItems(plan.id)
-  const model = usePlanModel(plan, items, today)
   return (
     <Link to={`/planes/${plan.id}`} className="block">
       <Card>
         <SectionTitle right={<span className="text-sm">límite {formatAR(plan.deadline, false)}</span>}>{plan.name}</SectionTitle>
+        {plan.kind === 'amount' ? <AmountSummary plan={plan} today={today} /> : <ItemsSummary plan={plan} today={today} />}
+      </Card>
+    </Link>
+  )
+}
+
+function ItemsSummary({ plan, today }: { plan: Plan; today: string }) {
+  const items = usePlanItems(plan.id)
+  const model = usePlanModel(plan, items, today)
+  return (
+    <>
         <div className="mb-1 flex justify-between text-sm">
           <span>
-            {model?.doneCount ?? 0}/{model?.total ?? 0} hechos
+            {model?.doneCount ?? 0}/{model?.total ?? 0} {plan.unit ?? 'hechos'}
           </span>
           {model?.metrics.ok && model.metrics.value.marginDays !== null && <span>{marginLabel(model.metrics.value.marginDays)}</span>}
         </div>
         <ProgressBar value={model?.total ? model.doneCount / model.total : null} />
-      </Card>
-    </Link>
+    </>
   )
 }

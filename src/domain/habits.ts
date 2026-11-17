@@ -193,6 +193,13 @@ export function linkedHabitDays(
   return s
 }
 
+/** Amount plans: days with some progress logged → derived done-days for its linked habit. */
+export function linkedHabitLogDays(logs: readonly { date: ISODate; amount: number; deletedAt?: string }[]): Set<ISODate> {
+  const s = new Set<ISODate>()
+  for (const l of logs) if (l.amount > 0 && !l.deletedAt) s.add(l.date)
+  return s
+}
+
 /** Formats a ratio as "73%" or "—". */
 export function formatPct(r: Ratio | number | null): string {
   const v = typeof r === 'number' || r === null ? r : r.pct

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { compareISO, formatAR, type ISODate } from '../../domain/dates'
 import { marginLabel, situationLabel } from '../../domain/plans'
+import { formatAmount } from '../../domain/progress'
 import type { PlanMetrics } from '../../domain/schedule'
 import {
   addItems,
@@ -17,9 +18,10 @@ import {
 } from '../../data/repo'
 import type { Milestone, Plan, PlanItem } from '../../data/types'
 import { Button, Card, Check, cx, Empty, Field, inputCls, PendingNotice, ProgressBar, SectionTitle, Sheet } from '../components'
-import { useMilestones, usePlan, usePlanItems, useToday } from '../hooks'
+import { useMilestones, usePlan, usePlanItems, usePlanLogs, useToday } from '../hooks'
 import { SortableList } from '../Sortable'
 import { usePlanModel, type PlanModel } from '../usePlanModel'
+import { AmountDashboard, LogHistory } from './AmountPlan'
 import { PlanForm } from './PlanForm'
 
 export function PlanDetailScreen() {
@@ -27,14 +29,16 @@ export function PlanDetailScreen() {
   const today = useToday()
   const plan = usePlan(id)
   const items = usePlanItems(id)
+  const logs = usePlanLogs(id)
   const model = usePlanModel(plan, items, today)
   const [editing, setEditing] = useState(false)
   const [pasting, setPasting] = useState(false)
   const [editItem, setEditItem] = useState<PlanItem | null>(null)
   const navigate = useNavigate()
 
-  if (plan === undefined || !items || !model) return <Empty>Cargando…</Empty>
+  if (plan === undefined || !items || !logs || !model) return <Empty>Cargando…</Empty>
   if (!plan || plan.deletedAt) return <Empty>Este plan no existe.</Empty>
+  const isAmount = plan.kind === 'amount'
 
   return (
     <div className="space-y-4">
@@ -42,12 +46,19 @@ export function PlanDetailScreen() {
         <div>
           <h1 className="text-2xl font-semibold">{plan.name}</h1>
           <p className="text-sm text-ink-soft dark:text-neutral-400">
-            {formatAR(plan.startDate)} → {formatAR(plan.deadline)} · {String(plan.pace).replace('.', ',')}/día
+            {formatAR(plan.startDate)} → {formatAR(plan.deadline)} · {formatAmount(plan.pace, plan.unit)}/día
           </p>
         </div>
         <Button onClick={() => setEditing(true)}>Editar</Button>
       </header>
 
+      {isAmount ? (
+        <>
+          <AmountDashboard plan={plan} logs={logs} today={today} />
+          <LogHistory plan={plan} logs={logs} today={today} />
+        </>
+      ) : (
+        <>
       <Dashboard plan={plan} model={model} items={items} today={today} />
 
       <Card>
@@ -73,12 +84,15 @@ export function PlanDetailScreen() {
           </>
         )}
       </Card>
+        </>
+      )}
 
       <Milestones planId={plan.id} today={today} />
 
       <Card>
         <SectionTitle>Acciones</SectionTitle>
         <div className="space-y-2">
+          {!isAmount && (
           <Button
             className="w-full"
             onClick={() => {
@@ -90,6 +104,7 @@ export function PlanDetailScreen() {
           >
             🔁 Replanificar desde hoy
           </Button>
+          )}
           <Button
             variant="danger"
             className="w-full"
@@ -109,6 +124,8 @@ export function PlanDetailScreen() {
           onSubmit={async (v) => {
             await updatePlan(plan.id, {
               name: v.name,
+              unit: v.unit,
+              ...(isAmount ? { target: v.target } : {}),
               startDate: v.startDate,
               deadline: v.deadline,
               pace: v.pace,

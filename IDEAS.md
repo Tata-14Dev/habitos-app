@@ -9,3 +9,6 @@
 - **Segundo recordatorio a la noche:** "Te faltan 2 hábitos".
 - **Separar Recharts en otro chunk** (`import()` dinámico) para que la primera carga sea más liviana: el bundle principal pesa unos 800 kB.
 - **Sincronización en tiempo real** con Supabase Realtime en lugar de consultar cada minuto y al volver a la app.
+- **Metas semanales en la vista del mes:** hoy el "% por hábito" del mes muestra "—" para las metas semanales. Se podría mostrar "3 de 4 semanas cumplidas".
+- **Salud, más adelante:** base de alimentos con calorías (o lector de código de barras), macros (proteínas, carbohidratos y grasas), IMC con la altura, dictado de comidas ("almorcé milanesa con puré") y recordatorio para pesarse.
+- **Recordatorio de hábitos por momento del día:** un aviso a la mañana, otro a la tarde y otro a la noche, cada uno con los hábitos de ese momento.

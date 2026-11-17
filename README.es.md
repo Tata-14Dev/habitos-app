@@ -19,11 +19,13 @@ Llevaba mis hábitos y planes de estudio en planillas. En la compu andaban bien,
 
 - **Resumen del día.** Las tareas de hoy, los hábitos, los planes activos y cómo estás de ánimo y motivación, todo en una pantalla.
 - **Tareas por dictado.** Decís *"dentista a las 15 horas, comprar yerba, después llamar a Juan"* con el micrófono del teclado del iPhone y quedan tres tareas, una a las 15:00. El separador funciona por reglas: corta por puntuación y conectores ("después", "luego", "también") y entiende horas como *"9 y media"*, *"3 de la tarde"*, *"18.30 hs"* o *"al mediodía"*.
-- **Hábitos con vigencia.** Un hábito cuenta solo entre su fecha de inicio y su fecha de fin, así que agregar o dar de baja uno no cambia los porcentajes de días pasados. Tiene racha actual y mejor racha, grilla mensual y gráficos de tendencia.
+- **Tres tipos de hábito.** *Fijos*: todos los días (hacer la cama, pasear al perro), con un momento del día opcional (mañana, tarde o noche). *Del día*: algunos días de la semana o una sola fecha. *Con progreso*: una cantidad por día o por semana (1 h por día, 5 h por semana) o una cantidad de veces por semana (gimnasio 3 veces). "Hoy" muestra solo lo que toca, agrupado por momento del día, más las metas de la semana.
+- **Porcentajes y rachas justos.** Un hábito cuenta solo los días que le tocan y dentro de su vigencia, así que agregar, dar de baja o cambiar los días de un hábito no altera los porcentajes pasados. Las rachas diarias saltean los días que no tocan y las metas semanales llevan la racha en semanas. Hay grilla mensual y gráficos de tendencia.
 - **Planes de estudio que se reprograman solos.** Hay dos tipos: **por ítems** (una lista de rooms, lecciones o capítulos, que pegás uno por línea con `Módulo: ítem` opcional) y **por cantidad** (un total de horas, páginas o ejercicios, que registrás día a día). Definís el ritmo, los días de descanso, las fechas bloqueadas y la fecha límite. Cada avance recalcula la fecha de fin estimada, cuánto vas adelantado o atrasado y el ritmo que necesitás. Un plan se puede vincular a un hábito, que se marca solo los días en que avanzás.
 - **PWA offline-first.** Un service worker de Workbox guarda la app entera en caché. Todo se escribe primero en IndexedDB, así que la app nunca espera a la red.
 - **Sincronización entre dispositivos.** Login con mail y contraseña en Supabase; si hay conflicto, gana el último cambio.
 - **Recordatorio push a la mañana.** Web Push a la PWA instalada en iOS. Lo programa `pg_cron` y lo manda una Edge Function de Supabase, en la zona horaria de cada usuario.
+- **Seguimiento opcional de peso y calorías.** Se activa en Ajustes. Cargás las comidas en kcal contra un objetivo diario y un pesaje por día. Como el peso diario varía mucho, la app muestra la tendencia de 7 días, el ritmo semanal (calculado con una recta de mínimos cuadrados sobre las últimas 4 semanas) y la fecha en que llegarías a tu peso meta a ese ritmo.
 - **Respaldo.** Exportás e importás todos tus datos en JSON.
 
 ## Arquitectura
@@ -82,7 +84,7 @@ El motor se especificó **primero con tests**: 57 tests de Vitest y una guía co
 ## Estructura
 
 ```
-src/domain     lógica pura: fechas, hábitos, tareas (dictado), planes, schedule, progress
+src/domain     lógica pura: fechas, hábitos, tareas (dictado), planes, schedule, progress, health
 src/data       esquema de Dexie, store con outbox, motor de sync, repositorio, respaldo, push
 src/ui         pantallas y componentes
 src/charts     gráficos (Recharts)

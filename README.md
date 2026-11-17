@@ -19,11 +19,13 @@ I used to track habits and study plans in spreadsheets. They were fine on a lapt
 
 - **Daily briefing.** Today's tasks, habits, active study plans, and a mood and motivation check-in, all on one screen.
 - **Voice-dictated tasks.** Say *"dentista a las 15 horas, comprar yerba, después llamar a Juan"* with the iPhone keyboard mic and get three tasks, one of them at 15:00. The parser is rule-based. It splits on punctuation and connectors ("después", "luego", "también") and understands Spanish time phrases such as *"9 y media"*, *"3 de la tarde"*, *"18.30 hs"* and *"al mediodía"*.
-- **Habits with validity ranges.** A habit only counts on days between its start and end dates, so adding or retiring a habit doesn't distort past percentages. Includes current and best streaks, a monthly grid, and trend charts.
+- **Three kinds of habits.** *Fixed* routines every day (make the bed, walk the dog), optionally tied to morning, afternoon, or night; *day-specific* habits on some weekdays or a single date; and *progress* habits with an amount per day or per week (1 h a day, 5 h a week) or a number of times per week (gym 3×). "Today" shows only what's due, grouped by moment of the day, plus this week's goals.
+- **Fair percentages and streaks.** A habit only counts on days it's due and within its start/end dates, so adding, retiring, or rescheduling a habit never distorts past percentages. Daily streaks skip the days a habit isn't due; weekly goals keep streaks in weeks. Monthly grid and trend charts included.
 - **Study plans that reschedule themselves.** Two kinds: **item plans** (a list of rooms, lessons, or chapters, pasted one per line with optional `Module: item`) and **amount plans** (a total of hours, pages, or exercises, logged per day). Set a pace, rest weekdays, blocked dates, and a deadline. Every check-off recalculates the projected finish date, how far ahead or behind you are, and the pace you need. A plan can be linked to a habit that is marked done on any day you make progress.
 - **Offline-first PWA.** The whole app is precached by a Workbox service worker. Every write goes to IndexedDB first, so the app never waits on the network.
 - **Multi-device sync.** Email and password auth with Supabase, plus last-write-wins conflict resolution.
 - **Morning push reminder.** Web Push to the installed iOS PWA, scheduled with `pg_cron` and sent by a Supabase Edge Function in each user's local time zone.
+- **Optional weight & calorie tracking.** Turned on in Settings. Log meals in kcal against a daily target and one weigh-in a day. Because daily weight is noisy, the app shows a 7-day trend, a weekly rate from a least-squares fit over the last 4 weeks, and the date you'd reach your goal weight at that rate.
 - **Backup.** Export and import of all data as JSON.
 
 ## Architecture
@@ -82,7 +84,7 @@ The engine was specified **test-first**: 57 Vitest tests and a design guide with
 ## Project structure
 
 ```
-src/domain     pure logic: dates, habits, tasks (dictation parser), plans, schedule, progress
+src/domain     pure logic: dates, habits, tasks (dictation parser), plans, schedule, progress, health
 src/data       Dexie schema, outbox store, sync engine, repository, backup, push subscription
 src/ui         screens and components
 src/charts     Recharts wrappers

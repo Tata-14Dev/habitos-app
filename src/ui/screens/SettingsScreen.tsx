@@ -57,6 +57,22 @@ export function SettingsScreen() {
       </Card>
 
       <Card>
+        <SectionTitle>Salud</SectionTitle>
+        <label className="flex min-h-11 items-center justify-between gap-3">
+          <span>
+            Seguimiento de peso y calorías
+            <span className="block text-xs text-ink-soft dark:text-neutral-400">Suma la pestaña 🍎 Salud y un resumen en Hoy.</span>
+          </span>
+          <input
+            type="checkbox"
+            className="size-5 accent-progress"
+            checked={!!settings.healthEnabled}
+            onChange={(e) => void updateSettings({ healthEnabled: e.target.checked })}
+          />
+        </label>
+      </Card>
+
+      <Card>
         <SectionTitle>Datos</SectionTitle>
         <div className="space-y-2">
           <Button

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { monthRange, weekday, yearMonth } from '../../domain/dates'
-import { buildDoneLookup, formatPct, isHabitActive, mentalState, monthStats } from '../../domain/habits'
-import { setHabitDone } from '../../data/repo'
+import { buildAmountLookup, buildDoneLookup, formatPct, isHabitActive, isHabitScheduled, isWeeklyGoal, mentalState, monthStats } from '../../domain/habits'
+import { formatAmount } from '../../domain/progress'
+import { setHabitAmount, setHabitDone } from '../../data/repo'
 import { AreaTrend } from '../../charts/AreaTrend'
 import { Card, cx, Empty, ProgressBar, SectionTitle } from '../components'
 import { monthLabel, WEEKDAY_SHORT } from '../format'
@@ -22,7 +23,8 @@ export function MonthScreen() {
   const { weekStartsMonday } = useSettings()
 
   const linkedDays = useLinkedHabitDays()
-  const isDone = useMemo(() => buildDoneLookup(logs ?? [], linkedDays ?? {}), [logs, linkedDays])
+  const isDone = useMemo(() => buildDoneLookup(logs ?? [], linkedDays ?? {}, habits ?? []), [logs, linkedDays, habits])
+  const amountOf = useMemo(() => buildAmountLookup(logs ?? []), [logs])
 
   const stats = useMemo(() => monthStats(habits ?? [], year, month, isDone, today), [habits, year, month, isDone, today])
   const monthHabits = (habits ?? []).filter((h) => stats.days.some((d) => isHabitActive(h, d.date)))
@@ -86,11 +88,30 @@ export function MonthScreen() {
                       {h.emoji} {h.name}
                     </th>
                     {stats.days.map((d) => {
-                      const active = isHabitActive(h, d.date)
-                      const done = active && isDone(h.id, d.date)
+                      // Weekly goals can be logged any day; other habits only on the days they're due.
+                      const active = isWeeklyGoal(h) ? isHabitActive(h, d.date) : isHabitScheduled(h, d.date)
+                      const isAmount = h.goal?.type === 'amount'
+                      const amount = isAmount ? amountOf(h.id, d.date) : 0
+                      const done = active && (isAmount && isWeeklyGoal(h) ? amount > 0 : isDone(h.id, d.date))
                       return (
                         <td key={d.date} className={cx('p-0.5 text-center', weekday(d.date) === weekBreak && 'border-l border-line dark:border-neutral-700')}>
-                          {active ? (
+                          {active && isAmount ? (
+                            <button
+                              aria-label={`${h.name} ${d.date}`}
+                              disabled={d.future}
+                              onClick={() => {
+                                const v = prompt(`${h.name} · ${d.date}: ¿cuánto hiciste?`, amount ? String(amount).replace('.', ',') : '')
+                                if (v !== null && Number(v.replace(',', '.')) >= 0) void setHabitAmount(h.id, d.date, Number(v.replace(',', '.')))
+                              }}
+                              className={cx(
+                                'size-7 rounded-md border text-[10px]',
+                                done ? 'border-progress bg-progress text-white dark:text-neutral-900' : 'border-line bg-paper dark:border-neutral-600 dark:bg-neutral-700',
+                                d.future && 'opacity-40',
+                              )}
+                            >
+                              {amount ? formatAmount(amount) : ''}
+                            </button>
+                          ) : active ? (
                             <button
                               aria-label={`${h.name} ${d.date}`}
                               disabled={d.future}

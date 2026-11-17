@@ -1,6 +1,7 @@
 import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom'
 import { cx } from './components'
-import { useSyncState } from './hooks'
+import { useSettings, useSyncState } from './hooks'
+import { HealthScreen } from './screens/HealthScreen'
 import { HabitsScreen } from './screens/HabitsScreen'
 import { MonthScreen } from './screens/MonthScreen'
 import { PlanDetailScreen } from './screens/PlanDetailScreen'
@@ -15,7 +16,11 @@ const TABS = [
   { to: '/ajustes', label: 'Ajustes', icon: '⚙️', end: false },
 ]
 
+const HEALTH_TAB = { to: '/salud', label: 'Salud', icon: '🍎', end: false }
+
 export default function App() {
+  const { healthEnabled } = useSettings()
+  const tabs = healthEnabled ? [...TABS.slice(0, 3), HEALTH_TAB, TABS[3]] : TABS
   return (
     <BrowserRouter>
       <div className="mx-auto min-h-dvh max-w-xl px-4 pb-28 pt-[max(0.5rem,env(safe-area-inset-top))]">
@@ -26,13 +31,14 @@ export default function App() {
           <Route path="/habitos/mes/:year/:month" element={<MonthScreen />} />
           <Route path="/planes" element={<PlansScreen />} />
           <Route path="/planes/:id" element={<PlanDetailScreen />} />
+          <Route path="/salud" element={<HealthScreen />} />
           <Route path="/ajustes" element={<SettingsScreen />} />
           <Route path="*" element={<TodayScreen />} />
         </Routes>
       </div>
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur dark:border-neutral-700 dark:bg-neutral-900/95">
-        <ul className="mx-auto grid max-w-xl grid-cols-4">
-          {TABS.map((t) => (
+        <ul className={cx('mx-auto grid max-w-xl', tabs.length === 5 ? 'grid-cols-5' : 'grid-cols-4')}>
+          {tabs.map((t) => (
             <li key={t.to}>
               <NavLink
                 to={t.to}

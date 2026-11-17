@@ -1,28 +1,34 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { buildDoneLookup, dayRatio, formatPct, isHabitActive, mentalState } from '../../domain/habits'
+import { addDays, weekStart } from '../../domain/dates'
+import { buildDoneLookup, dayRatio, formatPct, isHabitScheduled, isWeeklyGoal, mentalState } from '../../domain/habits'
 import { marginLabel } from '../../domain/plans'
 import { formatTask, parseDictation, sortTasks } from '../../domain/tasks'
-import { addTasksFromText, deleteTask, setHabitDone, setItemDone, setMood, updateTask } from '../../data/repo'
+import { addTasksFromText, deleteTask, setItemDone, setMood, updateTask } from '../../data/repo'
 import type { Plan, PlanItem } from '../../data/types'
 import { Button, Card, Check, cx, Empty, inputCls, PendingNotice, ProgressBar, Scale, SectionTitle } from '../components'
 import { longDay } from '../format'
-import { useDayMoods, useHabitLogs, useHabits, usePlanItems, usePlans, useTasks, useToday, useLinkedHabitDays } from '../hooks'
+import { useDayMoods, useHabitLogs, useHabits, usePlanItems, usePlans, useSettings, useTasks, useToday, useLinkedHabitDays } from '../hooks'
 import { usePlanModel } from '../usePlanModel'
 import { AmountToday } from './AmountPlan'
+import { TodayHabitList, WeeklyGoalList } from './HabitWidgets'
+import { HealthTodayCard } from './HealthScreen'
 
 export function TodayScreen() {
   const today = useToday()
   const habits = useHabits()
-  const logs = useHabitLogs(today, today)
+  const { weekStartsMonday, healthEnabled } = useSettings()
+  const week = weekStart(today, weekStartsMonday)
+  const logs = useHabitLogs(week, addDays(week, 6))
   const plans = usePlans()
   const tasks = useTasks(today)
   const mood = useDayMoods(today, today)?.[0]
 
   const linkedDays = useLinkedHabitDays()
-  const isDone = useMemo(() => buildDoneLookup(logs ?? [], linkedDays ?? {}), [logs, linkedDays])
+  const isDone = useMemo(() => buildDoneLookup(logs ?? [], linkedDays ?? {}, habits ?? []), [logs, linkedDays, habits])
 
-  const todayHabits = (habits ?? []).filter((h) => isHabitActive(h, today))
+  const dueToday = (habits ?? []).filter((h) => isHabitScheduled(h, today))
+  const hasWeekly = (habits ?? []).some((h) => isWeeklyGoal(h) && h.startDate <= today && (!h.endDate || today <= h.endDate))
   const ratio = dayRatio(habits ?? [], today, isDone)
   const sortedTasks = sortTasks(tasks ?? [])
   const pendingTasks = sortedTasks.filter((t) => !t.done).length
@@ -33,7 +39,7 @@ export function TodayScreen() {
         <p className="text-sm text-ink-soft first-letter:uppercase dark:text-neutral-400">{longDay(today)}</p>
         <h1 className="text-2xl font-semibold">Tu día</h1>
         <p className="mt-1 text-ink-soft dark:text-neutral-400">
-          {briefingLine(pendingTasks, todayHabits.length - ratio.done)}
+          {briefingLine(pendingTasks, dueToday.length - ratio.done)}
         </p>
       </header>
 
@@ -64,33 +70,23 @@ export function TodayScreen() {
       <Card>
         <SectionTitle right={<span className="text-sm font-semibold">{formatPct(ratio)}</span>}>Hábitos</SectionTitle>
         <ProgressBar value={ratio.pct} />
-        {todayHabits.length === 0 ? (
+        {dueToday.length === 0 ? (
           <Empty>
-            No tenés hábitos vigentes. <Link to="/habitos" className="underline">Agregá uno</Link>.
+            Hoy no te toca ningún hábito. <Link to="/habitos" className="underline">Agregá uno</Link>.
           </Empty>
         ) : (
-          <ul className="mt-2 divide-y divide-line dark:divide-neutral-700">
-            {todayHabits.map((h) => {
-              const done = isDone(h.id, today)
-              const linked = plans?.find((p) => p.linkedHabitId === h.id)
-              return (
-                <li key={h.id} className="flex items-center gap-3 py-2">
-                  <Check checked={done} label={h.name} onChange={(v) => void setHabitDone(h.id, today, v)} />
-                  <span className="flex-1 text-base">
-                    {h.emoji && <span className="mr-1">{h.emoji}</span>}
-                    {h.name}
-                    {linked && (
-                      <span className="block text-xs text-ink-soft">
-                        Se marca solo al {linked.kind === 'amount' ? 'registrar avance en' : 'hacer un ítem de'} {linked.name}
-                      </span>
-                    )}
-                  </span>
-                </li>
-              )
-            })}
-          </ul>
+          <TodayHabitList habits={habits ?? []} logs={logs ?? []} isDone={isDone} today={today} plans={plans ?? []} />
         )}
       </Card>
+
+      {hasWeekly && (
+        <Card>
+          <SectionTitle>Metas de la semana</SectionTitle>
+          <WeeklyGoalList habits={habits ?? []} logs={logs ?? []} today={today} mondayFirst={weekStartsMonday} />
+        </Card>
+      )}
+
+      {healthEnabled && <HealthTodayCard today={today} />}
 
       {(plans ?? []).map((p) =>
         p.kind === 'amount' ? <AmountToday key={p.id} plan={p} today={today} /> : <PlanToday key={p.id} plan={p} today={today} />,

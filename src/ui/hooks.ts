@@ -108,6 +108,14 @@ export function useTasks(date: ISODate) {
   return useLiveQuery(async () => alive(await db.tasks.where('date').equals(date).toArray()), [date])
 }
 
+export function useBodyWeights() {
+  return useLiveQuery(async () => alive(await db.bodyWeights.toArray()).sort((a, b) => a.date.localeCompare(b.date)), [])
+}
+
+export function useFoodEntries(from: ISODate, to: ISODate) {
+  return useLiveQuery(async () => alive(await db.foodEntries.where('date').between(from, to, true, true).toArray()), [from, to])
+}
+
 export function useSettings(): Settings {
   const s = useLiveQuery(() => db.settings.get('prefs'), [])
   return useMemo(() => ({ ...DEFAULT_SETTINGS, updatedAt: '', ...s }), [s])

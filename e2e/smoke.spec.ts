@@ -61,5 +61,53 @@ test('flujo básico: ejemplo, plan, ítems, hábitos y dictado', async ({ page }
   await page.reload()
   await expect(page.getByText('3/10 horas')).toBeVisible()
 
+  // Tipos de hábito: fijo a la mañana, uno de ciertos días (no hoy) y una meta semanal
+  const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+  const notToday = days[(new Date().getDay() + 2) % 7]
+  await page.getByRole('link', { name: /Hábitos/ }).click()
+
+  await page.getByRole('button', { name: '+ Nuevo' }).click()
+  await page.getByLabel('Nombre', { exact: true }).fill('Hacer la cama')
+  await page.getByRole('button', { name: 'Mañana', exact: true }).click()
+  await page.getByRole('button', { name: 'Guardar' }).click()
+  await expect(page.getByText('Todos los días · mañana')).toBeVisible()
+
+  await page.getByRole('button', { name: '+ Nuevo' }).click()
+  await page.getByRole('button', { name: /Del día/ }).click()
+  await page.getByLabel('Nombre', { exact: true }).fill('Natación')
+  await page.getByRole('button', { name: notToday, exact: true }).click()
+  await page.getByRole('button', { name: 'Guardar' }).click()
+
+  await page.getByRole('button', { name: '+ Nuevo' }).click()
+  await page.getByRole('button', { name: /Con progreso/ }).click()
+  await page.getByLabel('Nombre', { exact: true }).fill('Inglés semanal')
+  await page.getByLabel('Meta', { exact: true }).fill('5')
+  await page.getByLabel('Unidad', { exact: true }).fill('h')
+  await page.getByRole('button', { name: 'Por semana', exact: true }).click()
+  await page.getByRole('button', { name: 'Guardar' }).click()
+  await expect(page.getByText('5 h por semana')).toBeVisible()
+
+  await page.getByRole('link', { name: /Hoy/ }).click()
+  await expect(page.getByText('🌅 Mañana')).toBeVisible()
+  await expect(page.getByText('Hacer la cama')).toBeVisible()
+  await expect(page.getByText('Natación')).toHaveCount(0) // not due today
+  await expect(page.getByText('Metas de la semana')).toBeVisible()
+  await page.getByRole('button', { name: 'Sumar 1 h a Inglés semanal' }).click()
+  await expect(page.getByText('1/5 h esta semana')).toBeVisible()
+  await page.screenshot({ path: 'test-results/habitos-tipos.png', fullPage: true })
+
+  // Salud: activar, sumar calorías y un pesaje
+  await page.getByRole('link', { name: /Ajustes/ }).click()
+  await page.getByLabel(/Seguimiento de peso y calorías/).click()
+  await expect(page.getByLabel(/Seguimiento de peso y calorías/)).toBeChecked()
+  await page.getByRole('link', { name: /Salud/ }).click()
+  await page.getByLabel('Calorías', { exact: true }).fill('650')
+  await page.getByRole('button', { name: 'Sumar kcal' }).click()
+  await expect(page.getByText('650 kcal').first()).toBeVisible()
+  await page.getByLabel('Peso de hoy en kg').fill('72,5')
+  await page.getByRole('button', { name: 'Guardar' }).click()
+  await expect(page.getByText('Último: 72,5 kg', { exact: false })).toBeVisible()
+  await page.screenshot({ path: 'test-results/salud.png', fullPage: true })
+
   expect(errors).toEqual([])
 })

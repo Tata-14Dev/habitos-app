@@ -41,12 +41,12 @@ export function PlanDetailScreen() {
   const isAmount = plan.kind === 'amount'
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <header className="flex items-start justify-between gap-2 pt-2">
         <div>
           <h1 className="text-2xl font-semibold">{plan.name}</h1>
           <p className="text-sm text-ink-soft dark:text-neutral-400">
-            {formatAR(plan.startDate)} → {formatAR(plan.deadline)} · {formatAmount(plan.pace, plan.unit)}/día
+            {formatAR(plan.startDate, false)} → {formatAR(plan.deadline)} · ritmo {formatAmount(plan.pace)} por día
           </p>
         </div>
         <Button onClick={() => setEditing(true)}>Editar</Button>
@@ -67,12 +67,6 @@ export function PlanDetailScreen() {
           <Empty>Pegá la lista de ítems con "+ Ítems".</Empty>
         ) : (
           <>
-            <div className="mb-1 grid grid-cols-[2rem_2.75rem_1fr_auto] gap-2 px-1 text-[11px] uppercase tracking-wide text-ink-soft">
-              <span />
-              <span />
-              <span>Ítem</span>
-              <span className="text-right">Plan · Proy. · Real</span>
-            </div>
             <SortableList
               items={items}
               onReorder={(ids) => void reorderItems(plan.id, ids)}
@@ -120,6 +114,7 @@ export function PlanDetailScreen() {
       <Sheet open={editing} onClose={() => setEditing(false)} title="Editar plan">
         <PlanForm
           plan={plan}
+          total={isAmount ? plan.target : items.length}
           submitLabel="Guardar"
           onSubmit={async (v) => {
             await updatePlan(plan.id, {
@@ -236,20 +231,25 @@ function ItemRow({
   const proj = model.projection.ok ? model.projection.value[item.id] : undefined
   const late = !item.done && base && proj && compareISO(proj, base) > 0
   return (
-    <div className="grid grid-cols-[2rem_2.75rem_1fr_auto] items-center gap-2 py-1.5">
+    <div className="grid grid-cols-[2rem_2.75rem_1fr] items-center gap-3 py-2">
       {handle}
       <Check checked={item.done} label={item.title} onChange={(v) => void setItemDone(item.id, v, today)} />
-      <button className="min-w-0 text-left" onClick={onEdit}>
+      <button className="min-w-0 py-1 text-left" onClick={onEdit}>
         <span className={cx('block truncate', item.done && 'text-ink-soft line-through')}>{item.title}</span>
-        {item.section && <span className="block truncate text-xs text-ink-soft">{item.section}</span>}
+        <span className="block truncate text-xs text-ink-soft dark:text-neutral-400">
+          {item.section && `${item.section} · `}
+          {item.done && item.doneDate ? (
+            <>Hecho el {formatAR(item.doneDate, false)}</>
+          ) : proj ? (
+            <>
+              Toca el <span className={cx(late && 'font-medium text-amber-700 dark:text-amber-400')}>{formatAR(proj, false)}</span>
+              {late && base && ` (plan: ${formatAR(base, false)})`}
+            </>
+          ) : base ? (
+            <>Plan: {formatAR(base, false)}</>
+          ) : null}
+        </span>
       </button>
-      <span className="text-right font-mono text-[11px] leading-tight text-ink-soft dark:text-neutral-400">
-        {base ? formatAR(base, false) : '—'}
-        <br />
-        <span className={cx(late && 'text-amber-700 dark:text-amber-400')}>{proj ? formatAR(proj, false) : '—'}</span>
-        <br />
-        <span className="text-ink dark:text-neutral-200">{item.done && item.doneDate ? formatAR(item.doneDate, false) : ''}</span>
-      </span>
     </div>
   )
 }

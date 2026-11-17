@@ -48,7 +48,7 @@ test('flujo básico: ejemplo, plan, ítems, hábitos y dictado', async ({ page }
   await page.getByLabel('Total a completar').fill('10')
   await page.getByLabel('Unidad', { exact: true }).fill('horas')
   await page.getByLabel(/Ritmo/).fill('2')
-  await page.getByLabel('Fecha límite').fill('2027-12-31')
+  await expect(page.getByText(/Terminás el/)).toBeVisible() // end date computed: 10 h at 2 per day
   await page.getByRole('button', { name: 'Crear plan' }).click()
   await expect(page.getByText('Hoy te tocan 2 horas')).toBeVisible()
   await page.getByLabel(/Cantidad de horas para sumar hoy/).fill('3')
@@ -56,6 +56,24 @@ test('flujo básico: ejemplo, plan, ítems, hábitos y dictado', async ({ page }
   await expect(page.getByText('Hoy hiciste 3 horas 🎉')).toBeVisible()
   await expect(page.getByText('3/10 horas')).toBeVisible()
   await page.screenshot({ path: 'test-results/cantidad.png', fullPage: true })
+
+  // Plan por ítems sin pegar la lista: "34, se llaman Room, 1 por día" → la fecha de fin sale sola
+  await page.getByRole('link', { name: /Planes/ }).click()
+  await page.getByRole('button', { name: '+ Nuevo' }).click()
+  await page.getByLabel('Nombre', { exact: true }).fill('Curso rápido')
+  await page.getByLabel('¿Cuántos?').fill('34')
+  await page.getByLabel(/Se llaman/).fill('Room')
+  const expectedEnd = await page.evaluate(() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 33)
+    return d.toLocaleDateString('es-AR', { day: 'numeric' })
+  })
+  await expect(page.getByText(/Terminás el/)).toContainText(expectedEnd)
+  await page.getByRole('button', { name: 'Crear plan' }).click()
+  await expect(page.getByText('0/34')).toBeVisible()
+  await expect(page.getByText('Room 34', { exact: true })).toBeVisible()
+  await page.getByRole('link', { name: /Planes/ }).click()
+  await page.getByText('Inglés').first().click()
 
   // Persistencia: recargar
   await page.reload()

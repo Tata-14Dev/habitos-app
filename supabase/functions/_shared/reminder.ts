@@ -50,9 +50,43 @@ interface Alive {
 export interface ReminderData {
   tasks: (Alive & { date: ISODate; time?: string; title: string; done: boolean })[]
   habits: (Alive & { id: string; name: string; startDate: ISODate; endDate?: ISODate })[]
-  plans: (Alive & { id: string; name: string })[]
+  plans: (Alive & {
+    id: string
+    name: string
+    kind?: 'items' | 'amount'
+    unit?: string
+    target?: number
+    pace?: number
+    startDate?: ISODate
+    restWeekdays?: number[]
+    blockedDates?: ISODate[]
+  })[]
   planItems: (Alive & { id: string; planId: string; title: string; done: boolean })[]
   projections: (Alive & { planId: string; dates: Record<string, ISODate> })[]
+  /** Amount plans: progress per day. Optional so older callers keep working. */
+  planLogs?: (Alive & { planId: string; date: ISODate; amount: number })[]
+}
+
+/** Weekday (0 = Sunday) of a 'YYYY-MM-DD' date, independent of the server's time zone. */
+function weekdayOf(date: ISODate): number {
+  const [y, m, d] = date.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay()
+}
+
+/** Amount plan: what's left of today's quota (0 if not a study day, not started, or finished). */
+export function amountDueToday(
+  plan: ReminderData['plans'][number],
+  logs: { date: ISODate; amount: number }[],
+  date: ISODate,
+): number {
+  const pace = plan.pace ?? 0
+  if (pace <= 0 || !plan.target) return 0
+  if (plan.startDate && date < plan.startDate) return 0
+  if ((plan.restWeekdays ?? []).includes(weekdayOf(date)) || (plan.blockedDates ?? []).includes(date)) return 0
+  const done = logs.reduce((s, l) => s + l.amount, 0)
+  const doneToday = logs.filter((l) => l.date === date).reduce((s, l) => s + l.amount, 0)
+  const due = Math.min(pace - doneToday, plan.target - done)
+  return due > 1e-9 ? Math.round(due * 100) / 100 : 0
 }
 
 /** "Buen día ☀️" + a short summary of what's on today. */
@@ -70,6 +104,11 @@ export function buildReminder(date: ISODate, d: ReminderData): { title: string; 
     lines.push(`📝 ${shown.join(' · ')}${tasks.length > 3 ? ` (+${tasks.length - 3})` : ''}`)
   }
   for (const plan of live(d.plans)) {
+    if (plan.kind === 'amount') {
+      const due = amountDueToday(plan, live(d.planLogs ?? []).filter((l) => l.planId === plan.id), date)
+      if (due > 0) lines.push(`📚 ${plan.name}: hoy tocan ${String(due).replace('.', ',')}${plan.unit ? ` ${plan.unit}` : ''}`)
+      continue
+    }
     const proj = live(d.projections).find((p) => p.planId === plan.id)
     if (!proj) continue
     const today = live(d.planItems).filter((i) => i.planId === plan.id && !i.done && proj.dates[i.id] === date)

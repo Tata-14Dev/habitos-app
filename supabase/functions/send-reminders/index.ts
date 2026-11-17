@@ -4,7 +4,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 import webpush from 'npm:web-push@3.6.7'
 import { buildReminder, dueDate, localNow, type ReminderData } from '../_shared/reminder.ts'
 
-const COLLECTIONS = ['tasks', 'habits', 'plans', 'planItems', 'projections', 'pushSubscriptions'] as const
+const COLLECTIONS = ['tasks', 'habits', 'plans', 'planItems', 'planLogs', 'projections', 'pushSubscriptions'] as const
 
 Deno.serve(async (req) => {
   if (req.headers.get('x-cron-secret') !== Deno.env.get('CRON_SECRET')) {

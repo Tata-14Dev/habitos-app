@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildReminder, dueDate, localNow } from './reminder'
+import { amountDueToday, buildReminder, dueDate, localNow } from './reminder'
 
 const BA = 'America/Argentina/Buenos_Aires' // UTC−3
 
@@ -55,5 +55,26 @@ describe('buildReminder', () => {
   })
   it('sin nada cargado', () => {
     expect(buildReminder('2026-11-16', base).body).toMatch(/Dictás tu día/)
+  })
+})
+
+describe('amount plans', () => {
+  // 2026-11-16 is a Monday
+  const plan = { id: 'p', name: 'Inglés', kind: 'amount' as const, unit: 'horas', target: 10, pace: 2, startDate: '2026-11-16', restWeekdays: [0] }
+  it('a study day: full quota minus what was already done today', () => {
+    expect(amountDueToday(plan, [], '2026-11-16')).toBe(2)
+    expect(amountDueToday(plan, [{ date: '2026-11-16', amount: 0.5 }], '2026-11-16')).toBe(1.5)
+  })
+  it('rest day, not started, or finished → nothing', () => {
+    expect(amountDueToday(plan, [], '2026-11-22')).toBe(0) // Sunday
+    expect(amountDueToday(plan, [], '2026-11-15')).toBe(0)
+    expect(amountDueToday(plan, [{ date: '2026-11-17', amount: 10 }], '2026-11-18')).toBe(0)
+  })
+  it('never more than what is left', () => {
+    expect(amountDueToday(plan, [{ date: '2026-11-17', amount: 9 }], '2026-11-18')).toBe(1)
+  })
+  it('shows up in the reminder', () => {
+    const r = buildReminder('2026-11-16', { tasks: [], habits: [], plans: [plan], planItems: [], projections: [], planLogs: [] })
+    expect(r.body).toBe('📚 Inglés: hoy tocan 2 horas')
   })
 })

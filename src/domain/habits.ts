@@ -1,24 +1,44 @@
 /**
- * Habit logic: validity ranges ("desde/hasta"), completion percentages and streaks.
+ * Habit logic: validity ranges ("desde/hasta"), types, completion percentages and streaks.
  *
- * Rule from the spreadsheets: a percentage is ALWAYS done / habits active that day.
- * Habits outside their validity range — or days with no active habits — never count.
+ * Rule from the spreadsheets: a percentage is ALWAYS done / habits SCHEDULED that day.
+ * Habits outside their validity range, days a habit isn't due, and weekly goals never count
+ * in a daily percentage (weekly goals are measured per week instead).
+ *
+ * Types:
+ * - `fixed` (default, also every habit created before types existed): every day.
+ * - `scheduled`: one specific date (`onDate`) or some weekdays (`weekdays`).
+ * - `progress`: an amount per day/week (hours, pages…) or a number of times per week.
  */
-import { compareISO, eachDay, monthRange, type ISODate } from './dates'
+import { addDays, compareISO, eachDay, monthRange, weekday, weekStart, type ISODate } from './dates'
+
+export type HabitKind = 'fixed' | 'scheduled' | 'progress'
+export type TimeOfDay = 'morning' | 'afternoon' | 'night'
+export type HabitGoal =
+  | { type: 'amount'; period: 'day' | 'week'; target: number; unit: string }
+  | { type: 'times'; target: number }
 
 export interface HabitLike {
   id: string
   startDate: ISODate
   endDate?: ISODate
   deletedAt?: string
+  kind?: HabitKind
+  onDate?: ISODate
+  weekdays?: number[]
+  goal?: HabitGoal
 }
 
 export interface HabitLogLike {
   habitId: string
   date: ISODate
   done: boolean
+  /** Progress habits with an amount goal: how much was done that day. */
+  amount?: number
   deletedAt?: string
 }
+
+const EPS = 1e-9
 
 /** Answers "was habit X done on day D?". Build one with `buildDoneLookup`. */
 export type DoneLookup = (habitId: string, date: ISODate) => boolean
@@ -35,18 +55,104 @@ export function activeHabits<H extends HabitLike>(habits: readonly H[], date: IS
   return habits.filter((h) => isHabitActive(h, date))
 }
 
+/** Progress habit measured per week (an amount per week, or N times per week). */
+export function isWeeklyGoal(habit: HabitLike): boolean {
+  const g = habit.kind === 'progress' ? habit.goal : undefined
+  return !!g && (g.type === 'times' || g.period === 'week')
+}
+
+/** Progress habit with a daily amount goal ("1 hora por día"). */
+export function dailyAmountGoal(habit: HabitLike): number | null {
+  const g = habit.kind === 'progress' ? habit.goal : undefined
+  return g && g.type === 'amount' && g.period === 'day' ? g.target : null
+}
+
+/** One-off habit: due on a single date. */
+export function isOneOff(habit: HabitLike): boolean {
+  return habit.kind === 'scheduled' && !!habit.onDate
+}
+
+/**
+ * Is the habit DUE on `date`? Valid that day AND:
+ * fixed → every day · scheduled → only `onDate`, or only its weekdays ·
+ * progress per day → every day · weekly goals → never (they are measured per week).
+ */
+export function isHabitScheduled(habit: HabitLike, date: ISODate): boolean {
+  if (!isHabitActive(habit, date)) return false
+  if (habit.kind === 'scheduled') {
+    if (habit.onDate) return habit.onDate === date
+    return (habit.weekdays ?? []).includes(weekday(date))
+  }
+  if (habit.kind === 'progress') return !isWeeklyGoal(habit)
+  return true
+}
+
+export function scheduledHabits<H extends HabitLike>(habits: readonly H[], date: ISODate): H[] {
+  return habits.filter((h) => isHabitScheduled(h, date))
+}
+
 /**
  * Builds a lookup from manual logs plus "derived" done days.
  * `derived[habitId]` = days that count as done automatically (e.g. a habit linked to a study
  * plan is done on every day where at least one plan item was marked done).
+ * Pass `habits` so habits with a daily amount goal count as done when amount ≥ target.
  */
 export function buildDoneLookup(
   logs: readonly HabitLogLike[],
   derived: Record<string, ReadonlySet<ISODate>> = {},
+  habits: readonly HabitLike[] = [],
 ): DoneLookup {
+  const dailyTarget = new Map<string, number>()
+  for (const h of habits) {
+    const t = dailyAmountGoal(h)
+    if (t !== null) dailyTarget.set(h.id, t)
+  }
   const manual = new Set<string>()
-  for (const l of logs) if (l.done && !l.deletedAt) manual.add(`${l.habitId}|${l.date}`)
+  for (const l of logs) {
+    if (l.deletedAt) continue
+    const target = dailyTarget.get(l.habitId)
+    const done = target !== undefined ? (l.amount ?? 0) >= target - EPS : l.done
+    if (done) manual.add(`${l.habitId}|${l.date}`)
+  }
   return (habitId, date) => manual.has(`${habitId}|${date}`) || (derived[habitId]?.has(date) ?? false)
+}
+
+/** Amount logged for a habit on a day (0 if none). */
+export function buildAmountLookup(logs: readonly HabitLogLike[]): (habitId: string, date: ISODate) => number {
+  const m = new Map<string, number>()
+  for (const l of logs) if (!l.deletedAt && l.amount) m.set(`${l.habitId}|${l.date}`, l.amount)
+  return (habitId, date) => m.get(`${habitId}|${date}`) ?? 0
+}
+
+export interface WeekProgress {
+  from: ISODate
+  to: ISODate
+  done: number
+  target: number
+  met: boolean
+}
+
+/**
+ * Weekly goal progress for the week containing `date`: Σ amount (amount goals) or
+ * number of days marked done (times per week).
+ */
+export function weekProgress(
+  habit: HabitLike,
+  logs: readonly HabitLogLike[],
+  date: ISODate,
+  mondayFirst: boolean,
+): WeekProgress {
+  const from = weekStart(date, mondayFirst)
+  const to = addDays(from, 6)
+  const target = habit.goal?.target ?? 0
+  let done = 0
+  for (const l of logs) {
+    if (l.deletedAt || l.habitId !== habit.id || l.date < from || l.date > to) continue
+    if (habit.goal?.type === 'amount') done += l.amount ?? 0
+    else if (l.done) done++
+  }
+  done = Math.round(done * 100) / 100
+  return { from, to, done, target, met: target > 0 && done >= target - EPS }
 }
 
 export interface Ratio {
@@ -60,10 +166,10 @@ function ratio(done: number, total: number): Ratio {
   return { done, total, pct: total === 0 ? null : done / total }
 }
 
-/** Percentage of a single day: habits done / habits active that day. */
+/** Percentage of a single day: habits done / habits scheduled that day. */
 export function dayRatio(habits: readonly HabitLike[], date: ISODate, isDone: DoneLookup): Ratio {
-  const active = activeHabits(habits, date)
-  return ratio(active.filter((h) => isDone(h.id, date)).length, active.length)
+  const due = scheduledHabits(habits, date)
+  return ratio(due.filter((h) => isDone(h.id, date)).length, due.length)
 }
 
 /** Days of the range that have already started (≤ today). Future days never count. */
@@ -89,7 +195,7 @@ export function rangeRatio(
   return ratio(done, total)
 }
 
-/** One habit over a range: days done / days it was active (≤ today). */
+/** One habit over a range: days done / days it was scheduled (≤ today). */
 export function habitRangeRatio(
   habit: HabitLike,
   from: ISODate,
@@ -100,7 +206,7 @@ export function habitRangeRatio(
   let done = 0
   let total = 0
   for (const d of countedDays(from, to, today)) {
-    if (!isHabitActive(habit, d)) continue
+    if (!isHabitScheduled(habit, d)) continue
     total++
     if (isDone(habit.id, d)) done++
   }
@@ -153,18 +259,22 @@ export interface Streaks {
 }
 
 /**
- * Streaks count consecutive ACTIVE days with the habit done.
+ * Streaks count consecutive SCHEDULED days with the habit done (in days).
  * - `current` ends today if today is done; if today isn't done yet it ends yesterday
  *   (the day isn't over, so it doesn't break the streak).
- * - Days outside the validity range end a streak.
+ * - Days the habit isn't due (e.g. Tuesday for a Mon/Wed habit) are skipped: they neither
+ *   add to nor break the streak.
+ * - Days outside the validity range end a streak. One-off habits and weekly goals have no
+ *   daily streak (see `weeklyStreaks`).
  */
 export function habitStreaks(habit: HabitLike, isDone: DoneLookup, today: ISODate): Streaks {
-  if (compareISO(habit.startDate, today) > 0) return { current: 0, best: 0 }
+  if (compareISO(habit.startDate, today) > 0 || isOneOff(habit) || isWeeklyGoal(habit)) return { current: 0, best: 0 }
   const end = habit.endDate && compareISO(habit.endDate, today) < 0 ? habit.endDate : today
   let best = 0
   let run = 0
   for (const d of eachDay(habit.startDate, end)) {
-    if (isHabitActive(habit, d) && isDone(habit.id, d)) {
+    if (!isHabitScheduled(habit, d)) continue
+    if (isDone(habit.id, d)) {
       run++
       if (run > best) best = run
     } else if (d !== today) {
@@ -174,6 +284,32 @@ export function habitStreaks(habit: HabitLike, isDone: DoneLookup, today: ISODat
   // `run` is the streak ending at `end` (a pending today keeps yesterday's run).
   // A habit that already ended has no current streak.
   return { current: end === today ? run : 0, best }
+}
+
+/**
+ * Weekly goals: consecutive weeks with the goal met (in weeks). The current week doesn't
+ * break the streak while it's in progress. Weeks outside the validity range end it.
+ */
+export function weeklyStreaks(
+  habit: HabitLike,
+  logs: readonly HabitLogLike[],
+  today: ISODate,
+  mondayFirst: boolean,
+): Streaks {
+  if (!isWeeklyGoal(habit) || compareISO(habit.startDate, today) > 0) return { current: 0, best: 0 }
+  const last = habit.endDate && compareISO(habit.endDate, today) < 0 ? habit.endDate : today
+  const currentWeek = weekStart(today, mondayFirst)
+  let best = 0
+  let run = 0
+  for (let w = weekStart(habit.startDate, mondayFirst); w <= last; w = addDays(w, 7)) {
+    if (weekProgress(habit, logs, w, mondayFirst).met) {
+      run++
+      if (run > best) best = run
+    } else if (w !== currentWeek) {
+      run = 0
+    }
+  }
+  return { current: last === today ? run : 0, best }
 }
 
 /** "Estado mental": average of mood and motivation (0–10). Uses whichever exists; `null` if none. */

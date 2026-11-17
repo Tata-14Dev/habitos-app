@@ -95,6 +95,12 @@ export function minISO(a: ISODate, b: ISODate): ISODate {
   return compareISO(a, b) <= 0 ? a : b
 }
 
+/** First day of the week containing `iso` (Monday or Sunday). */
+export function weekStart(iso: ISODate, mondayFirst: boolean): ISODate {
+  const offset = (weekday(iso) - (mondayFirst ? 1 : 0) + 7) % 7
+  return addDays(iso, -offset)
+}
+
 /** Every day from `from` to `to`, both inclusive. Empty if `from > to`. */
 export function eachDay(from: ISODate, to: ISODate): ISODate[] {
   const out: ISODate[] = []

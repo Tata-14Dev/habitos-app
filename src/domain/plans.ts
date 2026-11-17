@@ -1,6 +1,6 @@
 /** Plan helpers that are NOT part of the scheduling exercise. */
 import type { ISODate } from './dates'
-import type { ScheduleConfig, ScheduleItem } from './schedule'
+import { nthAvailableDay, type ScheduleConfig, type ScheduleItem } from './schedule'
 
 export interface ParsedItem {
   title: string
@@ -59,4 +59,26 @@ export function marginLabel(days: number): string {
   const d = n === 1 ? 'día' : 'días'
   if (days > 0) return `✅ Te ${n === 1 ? 'sobra' : 'sobran'} ${n} ${d}`
   return `⚠️ Te pasás ${n} ${d}`
+}
+
+/**
+ * Day the plan ends if every available day from `startDate` does `pace` units:
+ * the ceil(total / pace)-th available day. `null` if there's nothing to plan or no day is
+ * available (e.g. all 7 weekdays marked as rest).
+ * @example suggestedDeadline(34, { startDate: '2026-11-16', pace: 1, restWeekdays: [], blockedDates: [] }) → '2026-12-19'
+ */
+export function suggestedDeadline(total: number, config: Omit<ScheduleConfig, 'deadline'>): ISODate | null {
+  if (!(total > 0) || !(config.pace > 0)) return null
+  const days = Math.max(1, Math.ceil(total / config.pace - 1e-9))
+  try {
+    return nthAvailableDay(config.startDate, days, { ...config, deadline: config.startDate })
+  } catch {
+    return null
+  }
+}
+
+/** "Room" × 3 → three lines "Room 1", "Room 2", "Room 3" (ready for addItems). */
+export function numberedItems(prefix: string, count: number): string {
+  const name = prefix.trim() || 'Ítem'
+  return Array.from({ length: Math.max(0, Math.floor(count)) }, (_, i) => `${name} ${i + 1}`).join('\n')
 }

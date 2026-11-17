@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { amountDueToday, buildReminder, dueDate, localNow } from './reminder'
+import { amountDueToday, buildReminder, dueDate, habitDueOn, localNow } from './reminder'
 
 const BA = 'America/Argentina/Buenos_Aires' // UTC−3
 
@@ -76,5 +76,30 @@ describe('amount plans', () => {
   it('shows up in the reminder', () => {
     const r = buildReminder('2026-11-16', { tasks: [], habits: [], plans: [plan], planItems: [], projections: [], planLogs: [] })
     expect(r.body).toBe('📚 Inglés: hoy tocan 2 horas')
+  })
+})
+
+describe('habit types in the reminder', () => {
+  const base = { startDate: '2026-11-01' }
+  it('counts only habits due that day', () => {
+    // 2026-11-17 is a Tuesday
+    expect(habitDueOn({ id: 'a', name: 'Cama', ...base }, '2026-11-17')).toBe(true)
+    expect(habitDueOn({ id: 'b', name: 'Natación', ...base, kind: 'scheduled', weekdays: [1, 3] }, '2026-11-17')).toBe(false)
+    expect(habitDueOn({ id: 'c', name: 'Service', ...base, kind: 'scheduled', onDate: '2026-11-17' }, '2026-11-17')).toBe(true)
+    expect(habitDueOn({ id: 'd', name: 'Gym', ...base, kind: 'progress', goal: { type: 'times' } }, '2026-11-17')).toBe(false)
+    expect(habitDueOn({ id: 'e', name: 'Estudiar', ...base, kind: 'progress', goal: { type: 'amount', period: 'day' } }, '2026-11-17')).toBe(true)
+  })
+  it('the count in the message follows that rule', () => {
+    const r = buildReminder('2026-11-17', {
+      tasks: [],
+      plans: [],
+      planItems: [],
+      projections: [],
+      habits: [
+        { id: 'a', name: 'Cama', ...base },
+        { id: 'b', name: 'Natación', ...base, kind: 'scheduled', weekdays: [1, 3] },
+      ],
+    })
+    expect(r.body).toBe('✅ 1 hábito para hoy')
   })
 })

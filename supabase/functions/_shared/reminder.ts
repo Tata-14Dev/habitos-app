@@ -49,7 +49,16 @@ interface Alive {
 }
 export interface ReminderData {
   tasks: (Alive & { date: ISODate; time?: string; title: string; done: boolean })[]
-  habits: (Alive & { id: string; name: string; startDate: ISODate; endDate?: ISODate })[]
+  habits: (Alive & {
+    id: string
+    name: string
+    startDate: ISODate
+    endDate?: ISODate
+    kind?: 'fixed' | 'scheduled' | 'progress'
+    onDate?: ISODate
+    weekdays?: number[]
+    goal?: { type: 'amount'; period: 'day' | 'week' } | { type: 'times' }
+  })[]
   plans: (Alive & {
     id: string
     name: string
@@ -71,6 +80,14 @@ export interface ReminderData {
 function weekdayOf(date: ISODate): number {
   const [y, m, d] = date.split('-').map(Number)
   return new Date(Date.UTC(y, m - 1, d)).getUTCDay()
+}
+
+/** Same rule as isHabitScheduled in src/domain/habits.ts (kept dependency-free for Deno). */
+export function habitDueOn(h: ReminderData['habits'][number], date: ISODate): boolean {
+  if (h.startDate > date || (h.endDate && date > h.endDate)) return false
+  if (h.kind === 'scheduled') return h.onDate ? h.onDate === date : (h.weekdays ?? []).includes(weekdayOf(date))
+  if (h.kind === 'progress') return !!h.goal && h.goal.type === 'amount' && h.goal.period === 'day'
+  return true
 }
 
 /** Amount plan: what's left of today's quota (0 if not a study day, not started, or finished). */
@@ -96,7 +113,7 @@ export function buildReminder(date: ISODate, d: ReminderData): { title: string; 
   const tasks = live(d.tasks)
     .filter((t) => t.date === date && !t.done)
     .sort((a, b) => (a.time && b.time ? a.time.localeCompare(b.time) : a.time ? -1 : b.time ? 1 : 0))
-  const habits = live(d.habits).filter((h) => h.startDate <= date && (!h.endDate || date <= h.endDate))
+  const habits = live(d.habits).filter((h) => habitDueOn(h, date))
 
   const lines: string[] = []
   if (tasks.length) {

@@ -34,7 +34,7 @@ export function TodayScreen() {
   const pendingTasks = sortedTasks.filter((t) => !t.done).length
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <header className="pt-2">
         <p className="text-sm text-ink-soft first-letter:uppercase dark:text-neutral-400">{longDay(today)}</p>
         <h1 className="text-2xl font-semibold">Tu día</h1>
@@ -52,7 +52,7 @@ export function TodayScreen() {
         ) : (
           <ul className="divide-y divide-line dark:divide-neutral-700">
             {sortedTasks.map((t) => (
-              <li key={t.id} className="flex items-center gap-3 py-2">
+              <li key={t.id} className="flex items-center gap-3 py-2.5">
                 <Check checked={t.done} label={t.title} onChange={(v) => void updateTask(t.id, { done: v })} />
                 <span className={cx('flex-1 text-base', t.done && 'text-ink-soft line-through')}>
                   {t.time && <span className="mr-2 font-mono font-semibold">{t.time}</span>}
@@ -182,7 +182,7 @@ function PlanToday({ plan, today }: { plan: Plan; today: string }) {
         <ul className="mt-2 divide-y divide-line dark:divide-neutral-700">
           {shown.length === 0 && <Empty>Hoy no te toca nada de este plan.</Empty>}
           {shown.map((it) => (
-            <li key={it.id} className="flex items-center gap-3 py-2">
+            <li key={it.id} className="flex items-center gap-3 py-2.5">
               <Check checked={it.done} label={it.title} onChange={(v) => void setItemDone(it.id, v, today)} />
               <span className={cx('flex-1', it.done && 'text-ink-soft line-through')}>
                 {it.section && <span className="text-xs text-ink-soft">{it.section} · </span>}

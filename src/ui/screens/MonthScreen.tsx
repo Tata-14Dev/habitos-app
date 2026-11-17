@@ -41,7 +41,7 @@ export function MonthScreen() {
   }, [today, year, month, monthHabits.length])
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <header className="flex items-center justify-between pt-2">
         <Link to={`/habitos/mes/${prev[0]}/${prev[1]}`} className="grid size-11 place-items-center rounded-xl bg-white text-xl dark:bg-neutral-800" aria-label="Mes anterior">
           ‹

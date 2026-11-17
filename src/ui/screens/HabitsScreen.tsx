@@ -14,7 +14,7 @@ import {
 } from '../../domain/habits'
 import { deleteHabit, reorderHabits, saveHabit } from '../../data/repo'
 import type { Habit } from '../../data/types'
-import { Button, Card, cx, Empty, Field, inputCls, SectionTitle, Sheet } from '../components'
+import { Button, Card, cx, Empty, Field, inputCls, MoreOptions, SectionTitle, Sheet } from '../components'
 import { WEEKDAY_NAMES } from '../format'
 import { habitSummary, TIME_OF_DAY } from '../habitText'
 import { useAllHabitLogs, useHabits, useLinkedHabitDays, useSettings, useToday } from '../hooks'
@@ -32,7 +32,7 @@ export function HabitsScreen() {
   const isDone = useMemo(() => buildDoneLookup(logs ?? [], linkedDays ?? {}, habits ?? []), [logs, linkedDays, habits])
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <header className="flex items-end justify-between pt-2">
         <h1 className="text-2xl font-semibold">Hábitos</h1>
         <Link to={`/habitos/mes/${year}/${month}`} className="text-sm underline">
@@ -190,7 +190,7 @@ function HabitForm({ habit, onDone }: { habit: Partial<Habit>; onDone: () => voi
 
   return (
     <form
-      className="space-y-4"
+      className="space-y-5"
       onSubmit={(e) => {
         e.preventDefault()
         void save()
@@ -318,14 +318,19 @@ function HabitForm({ habit, onDone }: { habit: Partial<Habit>; onDone: () => voi
       )}
 
       {!oneOff && (
-        <div className="grid grid-cols-2 gap-2">
-          <Field label="Desde">
-            <input type="date" className={inputCls} value={startDate} onChange={(e) => setStart(e.target.value)} />
-          </Field>
-          <Field label="Hasta (opcional)" hint="Si lo dejás, poné la fecha de fin: los meses anteriores conservan sus datos.">
-            <input type="date" className={inputCls} value={endDate} onChange={(e) => setEnd(e.target.value)} />
-          </Field>
-        </div>
+        <MoreOptions summary="Vigencia" hint={`Desde ${startDate ? formatAR(startDate) : '—'}${endDate ? ` hasta ${formatAR(endDate)}` : ', sin fecha de fin'}`}>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Desde">
+              <input type="date" className={inputCls} value={startDate} onChange={(e) => setStart(e.target.value)} />
+            </Field>
+            <Field label="Hasta (opcional)">
+              <input type="date" className={inputCls} value={endDate} onChange={(e) => setEnd(e.target.value)} />
+            </Field>
+          </div>
+          <p className="text-xs text-ink-soft dark:text-neutral-400">
+            Si dejás un hábito, poné la fecha "hasta" en vez de borrarlo: los meses anteriores conservan sus datos.
+          </p>
+        </MoreOptions>
       )}
 
       <div className="flex gap-2 pt-2">

@@ -17,7 +17,7 @@ export function SettingsScreen() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <h1 className="pt-2 text-2xl font-semibold">Ajustes</h1>
 
       <AccountCard />

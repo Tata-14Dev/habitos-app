@@ -161,7 +161,7 @@ export function HealthScreen() {
   const todayWeight = (weights ?? []).find((w) => w.date === today)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <header className="flex items-end justify-between pt-2">
         <h1 className="text-2xl font-semibold">Salud</h1>
         <Button onClick={() => setGoals(true)}>Objetivos</Button>

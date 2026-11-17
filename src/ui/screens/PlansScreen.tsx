@@ -17,7 +17,7 @@ export function PlansScreen() {
   const navigate = useNavigate()
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <header className="flex items-end justify-between pt-2">
         <h1 className="text-2xl font-semibold">Planes</h1>
         <Button variant="primary" onClick={() => setCreating(true)}>

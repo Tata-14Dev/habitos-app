@@ -6,13 +6,13 @@ export function cx(...c: (string | false | null | undefined)[]) {
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <section className={cx('rounded-2xl bg-white p-4 shadow-sm dark:bg-neutral-800', className)}>{children}</section>
+    <section className={cx('rounded-2xl bg-white p-5 shadow-sm dark:bg-neutral-800', className)}>{children}</section>
   )
 }
 
 export function SectionTitle({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (
-    <div className="mb-2 flex items-center justify-between gap-2">
+    <div className="mb-3 flex items-center justify-between gap-2">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-soft dark:text-neutral-400">{children}</h2>
       {right}
     </div>
@@ -98,6 +98,24 @@ export function Field({ label, children, hint }: { label: string; children: Reac
 export const inputCls =
   'w-full min-h-11 rounded-xl border border-line bg-white px-3 py-2 text-base text-ink outline-none focus:border-progress dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100'
 
+/** Collapsible group for secondary fields ("Más opciones"). Native <details>: accessible, no state. */
+export function MoreOptions({ children, summary = 'Más opciones', hint }: { children: ReactNode; summary?: string; hint?: string }) {
+  return (
+    <details className="group rounded-xl bg-paper px-3 dark:bg-neutral-900">
+      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
+        <span>
+          {summary}
+          {hint && <span className="block text-xs font-normal text-ink-soft dark:text-neutral-400">{hint}</span>}
+        </span>
+        <span className="text-ink-soft transition group-open:rotate-180" aria-hidden>
+          ▾
+        </span>
+      </summary>
+      <div className="space-y-4 pb-4 pt-1">{children}</div>
+    </details>
+  )
+}
+
 /** Bottom sheet / modal. */
 export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -114,7 +132,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
       onClick={(e) => e.target === ref.current && onClose()}
       className="m-0 mt-auto w-full max-w-none rounded-t-3xl bg-white p-0 text-ink backdrop:bg-black/40 sm:m-auto sm:max-w-lg sm:rounded-3xl dark:bg-neutral-800 dark:text-neutral-100"
     >
-      <div className="max-h-[85dvh] overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="max-h-[85dvh] overflow-y-auto p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-lg font-semibold">{title}</h3>
           <Button variant="ghost" onClick={onClose} aria-label="Cerrar">

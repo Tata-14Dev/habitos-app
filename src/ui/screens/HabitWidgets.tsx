@@ -144,7 +144,7 @@ export function TodayHabitList({
               }
               const linked = plans.find((p) => p.linkedHabitId === h.id)
               return (
-                <li key={h.id} className="flex items-center gap-3 py-2">
+                <li key={h.id} className="flex items-center gap-3 py-2.5">
                   <Check checked={done} label={h.name} onChange={(v) => void setHabitDone(h.id, today, v)} />
                   <HabitName
                     h={h}

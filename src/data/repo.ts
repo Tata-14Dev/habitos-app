@@ -11,6 +11,8 @@ import { db } from './db'
 import { newId, nowStamp, store } from './store'
 import {
   DEFAULT_SETTINGS,
+  type CustomFood,
+  type FoodItem,
   type Habit,
   type Meal,
   type Milestone,
@@ -237,8 +239,27 @@ export async function saveWeight(date: ISODate, kg: number) {
   await store.put('bodyWeights', { id: date, date, kg: Math.round(kg * 10) / 10 })
 }
 
-export async function addFood(input: { date: ISODate; kcal: number; label?: string; meal?: Meal }) {
-  return store.put('foodEntries', { id: newId(), ...input, kcal: Math.round(input.kcal) })
+export async function addFood(input: { date: ISODate; kcal: number; label?: string; meal?: Meal; items?: FoodItem[] }) {
+  const items = input.items?.length ? input.items.map((i) => ({ ...i, kcal: Math.round(i.kcal) })) : undefined
+  return store.put('foodEntries', { id: newId(), ...input, items, kcal: Math.round(input.kcal) })
+}
+
+/** Creates or updates a custom food ("Mis alimentos"). */
+export async function saveCustomFood(input: Partial<CustomFood> & Pick<CustomFood, 'name'>) {
+  const existing = input.id ? await db.customFoods.get(input.id) : undefined
+  const clean = (n: number | undefined) => (n !== undefined && Number.isFinite(n) && n >= 0 ? Math.round(n * 10) / 10 : undefined)
+  return store.put('customFoods', {
+    ...existing,
+    id: input.id ?? newId(),
+    name: input.name.trim(),
+    kcal100: clean(input.kcal100),
+    kcalPerUnit: clean(input.kcalPerUnit),
+    unitGrams: input.unitGrams && input.unitGrams > 0 ? clean(input.unitGrams) : undefined,
+  })
+}
+
+export async function deleteCustomFood(id: string) {
+  await store.softDelete('customFoods', [id])
 }
 
 export async function deleteFood(id: string) {

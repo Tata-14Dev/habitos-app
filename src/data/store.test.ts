@@ -71,3 +71,12 @@ describe('applyRemote', () => {
     expect(await db.tasks.count()).toBe(0)
   })
 })
+
+describe('customFoods (v4)', () => {
+  it('la tabla existe y se sincroniza como las demás', async () => {
+    expect(db.verno).toBeGreaterThanOrEqual(4)
+    await store.put('customFoods', { id: 'c1', name: 'Tarta de la abuela', kcalPerUnit: 450 })
+    expect(await db.customFoods.get('c1')).toMatchObject({ name: 'Tarta de la abuela', kcalPerUnit: 450 })
+    expect(await db.outbox.get('customFoods|c1')).toMatchObject({ collection: 'customFoods' })
+  })
+})

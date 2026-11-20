@@ -28,6 +28,7 @@ export class HabitosDB extends Dexie {
   tasks!: Table<CollectionMap['tasks'], string>
   bodyWeights!: Table<CollectionMap['bodyWeights'], string>
   foodEntries!: Table<CollectionMap['foodEntries'], string>
+  customFoods!: Table<CollectionMap['customFoods'], string>
   settings!: Table<CollectionMap['settings'], string>
   pushSubscriptions!: Table<CollectionMap['pushSubscriptions'], string>
   outbox!: Table<OutboxEntry, string>
@@ -57,6 +58,10 @@ export class HabitosDB extends Dexie {
     this.version(3).stores({
       bodyWeights: 'id, date, updatedAt',
       foodEntries: 'id, date, updatedAt',
+    })
+    // v4: "Mis alimentos" (custom foods for the meal text parser).
+    this.version(4).stores({
+      customFoods: 'id, updatedAt',
     })
   }
 

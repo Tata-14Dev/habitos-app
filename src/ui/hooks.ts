@@ -116,6 +116,10 @@ export function useFoodEntries(from: ISODate, to: ISODate) {
   return useLiveQuery(async () => alive(await db.foodEntries.where('date').between(from, to, true, true).toArray()), [from, to])
 }
 
+export function useCustomFoods() {
+  return useLiveQuery(async () => alive(await db.customFoods.toArray()).sort((a, b) => a.name.localeCompare(b.name, 'es')), [])
+}
+
 export function useSettings(): Settings {
   const s = useLiveQuery(() => db.settings.get('prefs'), [])
   return useMemo(() => ({ ...DEFAULT_SETTINGS, updatedAt: '', ...s }), [s])

@@ -97,11 +97,34 @@ export interface BodyWeight extends SyncFields {
 
 export type Meal = 'desayuno' | 'almuerzo' | 'merienda' | 'cena' | 'snack'
 
+/** One line of a meal typed as text ("200 g arroz"), with what it was computed as. */
+export interface FoodItem {
+  text: string
+  /** Built-in food id or custom food id. Missing when the kcal were typed by hand. */
+  foodId?: string
+  /** Grams (ml for liquids), when known. */
+  grams?: number
+  kcal: number
+}
+
 export interface FoodEntry extends SyncFields {
   date: ISODate
   kcal: number
   label?: string
   meal?: Meal
+  /** Breakdown when the meal was typed as text. */
+  items?: FoodItem[]
+}
+
+/** "Mis alimentos": foods the user taught the app. Either per 100 g or per unit. */
+export interface CustomFood extends SyncFields {
+  name: string
+  /** kcal per 100 g. */
+  kcal100?: number
+  /** kcal of one unit. */
+  kcalPerUnit?: number
+  /** Grams of one unit (optional). */
+  unitGrams?: number
 }
 
 /** Last projection computed on a device (id === planId). The server reads it for "Hoy toca: Room 12". */
@@ -162,6 +185,7 @@ export interface CollectionMap {
   tasks: Task
   bodyWeights: BodyWeight
   foodEntries: FoodEntry
+  customFoods: CustomFood
   settings: Settings
   pushSubscriptions: PushSubscriptionRecord
 }
@@ -180,6 +204,7 @@ export const COLLECTIONS: CollectionName[] = [
   'tasks',
   'bodyWeights',
   'foodEntries',
+  'customFoods',
   'settings',
   'pushSubscriptions',
 ]

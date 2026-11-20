@@ -25,7 +25,7 @@ I used to track habits and study plans in spreadsheets. They were fine on a lapt
 - **Offline-first PWA.** The whole app is precached by a Workbox service worker. Every write goes to IndexedDB first, so the app never waits on the network.
 - **Multi-device sync.** Email and password auth with Supabase, plus last-write-wins conflict resolution.
 - **Morning push reminder.** Web Push to the installed iOS PWA, scheduled with `pg_cron` and sent by a Supabase Edge Function in each user's local time zone.
-- **Optional weight & calorie tracking.** Turned on in Settings. Log meals in kcal against a daily target and one weigh-in a day. Because daily weight is noisy, the app shows a 7-day trend, a weekly rate from a least-squares fit over the last 4 weeks, and the date you'd reach your goal weight at that rate.
+- **Optional weight & calorie tracking.** Turned on in Settings. Log meals by typing what you ate (`200 g arroz, 2 huevos, 1 taza de leche`): the app looks each food up in a built-in dictionary of ~300 Argentine foods (approximate values) plus your own "Mis alimentos" and computes the kcal, with a live preview; plain kcal still works. See [docs/COMIDAS.md](docs/COMIDAS.md). Track that against a daily target and one weigh-in a day. Because daily weight is noisy, the app shows a 7-day trend, a weekly rate from a least-squares fit over the last 4 weeks, and the date you'd reach your goal weight at that rate.
 - **Backup.** Export and import of all data as JSON.
 
 ## Architecture

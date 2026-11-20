@@ -4,26 +4,10 @@ import { Link } from 'react-router-dom'
 import { CalorieBars, WeightChart } from '../../charts/HealthCharts'
 import { addDays, formatAR, type ISODate } from '../../domain/dates'
 import { calorieSummary, dayCalories, formatKcal, formatKg, weightSeries, weightSummary } from '../../domain/health'
-import { addFood, deleteFood, saveWeight, updateSettings } from '../../data/repo'
-import type { Meal } from '../../data/types'
+import { saveWeight, updateSettings } from '../../data/repo'
 import { Button, Card, cx, Empty, Field, inputCls, ProgressBar, SectionTitle, Sheet } from '../components'
 import { useBodyWeights, useFoodEntries, useSettings, useToday } from '../hooks'
-
-const MEALS: { value: Meal; label: string; icon: string }[] = [
-  { value: 'desayuno', label: 'Desayuno', icon: '☕' },
-  { value: 'almuerzo', label: 'Almuerzo', icon: '🍽️' },
-  { value: 'merienda', label: 'Merienda', icon: '🧉' },
-  { value: 'cena', label: 'Cena', icon: '🌙' },
-  { value: 'snack', label: 'Snack', icon: '🍎' },
-]
-
-/** Meal that fits the current hour (only a default; the user can change it). */
-function mealForNow(h = new Date().getHours()): Meal {
-  if (h < 11) return 'desayuno'
-  if (h < 15) return 'almuerzo'
-  if (h < 19) return 'merienda'
-  return 'cena'
-}
+import { FoodEntryList, MealForm, MyFoodsCard, QuickFoodForm } from './FoodLog'
 
 const parseNum = (s: string) => Number(s.replace(',', '.'))
 
@@ -42,56 +26,6 @@ function remainingLine(eaten: number, target: number | undefined): string | null
   if (!target) return null
   const left = target - eaten
   return left >= 0 ? `Te quedan ${formatKcal(left)} kcal` : `Te pasaste ${formatKcal(-left)} kcal`
-}
-
-function FoodForm({ today, compact }: { today: ISODate; compact?: boolean }) {
-  const [kcal, setKcal] = useState('')
-  const [label, setLabel] = useState('')
-  const [meal, setMeal] = useState<Meal>(mealForNow())
-  const n = parseNum(kcal)
-  const valid = n > 0 && n < 10000
-  return (
-    <form
-      className="space-y-2"
-      onSubmit={(e) => {
-        e.preventDefault()
-        if (!valid) return
-        void addFood({ date: today, kcal: n, label: label.trim() || undefined, meal }).then(() => {
-          setKcal('')
-          setLabel('')
-        })
-      }}
-    >
-      {!compact && (
-        <input className={inputCls} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Qué comiste (opcional)" aria-label="Qué comiste" />
-      )}
-      <div className="grid grid-cols-[1fr_auto] gap-2">
-        <input inputMode="numeric" className={inputCls} value={kcal} onChange={(e) => setKcal(e.target.value)} placeholder="kcal" aria-label="Calorías" />
-        <Button type="submit" variant="primary" disabled={!valid}>
-          Sumar kcal
-        </Button>
-      </div>
-      {!compact && (
-        <div className="grid grid-cols-5 gap-1">
-          {MEALS.map((m) => (
-            <button
-              type="button"
-              key={m.value}
-              aria-pressed={meal === m.value}
-              onClick={() => setMeal(m.value)}
-              className={cx(
-                'min-h-10 rounded-lg text-[11px]',
-                meal === m.value ? 'bg-ink text-white dark:bg-neutral-200 dark:text-neutral-900' : 'bg-paper dark:bg-neutral-700',
-              )}
-            >
-              <span className="block text-base leading-none">{m.icon}</span>
-              {m.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </form>
-  )
 }
 
 function WeightForm({ today, current }: { today: ISODate; current?: number }) {
@@ -174,25 +108,9 @@ export function HealthScreen() {
         {target ? <ProgressBar value={eaten / target} color={eaten > target ? 'bg-mood' : 'bg-progress'} /> : null}
         {remainingLine(eaten, target) && <p className="mt-2 text-sm">{remainingLine(eaten, target)}</p>}
         <div className="mt-3">
-          <FoodForm today={today} />
+          <MealForm today={today} />
         </div>
-        {todays.length > 0 && (
-          <ul className="mt-3 divide-y divide-line dark:divide-neutral-700">
-            {todays.map((f) => {
-              const m = MEALS.find((x) => x.value === f.meal)
-              return (
-                <li key={f.id} className="flex items-center gap-2 py-2">
-                  <span className="text-lg">{m?.icon ?? '🍴'}</span>
-                  <span className="min-w-0 flex-1 truncate">{f.label ?? m?.label ?? 'Comida'}</span>
-                  <span className="font-medium">{formatKcal(f.kcal)} kcal</span>
-                  <button className="px-2 text-ink-soft" aria-label={`Borrar ${f.label ?? 'comida'}`} onClick={() => void deleteFood(f.id)}>
-                    ✕
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        )}
+        <FoodEntryList entries={todays} />
       </Card>
 
       <Card>
@@ -228,6 +146,8 @@ export function HealthScreen() {
           </>
         )}
       </Card>
+
+      <MyFoodsCard />
 
       <Card>
         <SectionTitle>Calorías · últimos 30 días</SectionTitle>
@@ -279,7 +199,7 @@ export function HealthTodayCard({ today }: { today: ISODate }) {
       </div>
       {target ? <ProgressBar value={eaten / target} color={eaten > target ? 'bg-mood' : 'bg-progress'} /> : null}
       <div className="mt-3">
-        <FoodForm today={today} compact />
+        <QuickFoodForm today={today} />
       </div>
     </Card>
   )

@@ -119,13 +119,47 @@ test('flujo básico: ejemplo, plan, ítems, hábitos y dictado', async ({ page }
   await page.getByLabel(/Seguimiento de peso y calorías/).click()
   await expect(page.getByLabel(/Seguimiento de peso y calorías/)).toBeChecked()
   await page.getByRole('link', { name: /Salud/ }).click()
+
+  // Comida escrita: diccionario + un alimento desconocido que se resuelve con "Mis alimentos"
+  await page.getByLabel('¿Qué comiste?').fill('200 g arroz, 2 huevos\n1 guiso de la abuela')
+  const preview = page.getByRole('list', { name: 'Vista previa' })
+  await expect(preview.getByText('Arroz blanco (cocido) · 200 g')).toBeVisible()
+  await expect(preview.getByText('Huevo (entero, crudo o duro) · 100 g')).toBeVisible()
+  await expect(preview.getByText('No conozco «guiso de la abuela».')).toBeVisible()
+  await expect(page.getByText('Total: 415 kcal')).toBeVisible() // 260 + 155, the unknown line doesn't count yet
+  await expect(page.getByRole('button', { name: 'Sumar 415 kcal' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Guardar en Mis alimentos' }).click()
+  const sheet = page.getByRole('dialog')
+  await expect(sheet.getByLabel(/^Nombre/)).toHaveValue('Guiso de la abuela')
+  await sheet.getByLabel('kcal de una unidad').fill('450')
+  await sheet.getByRole('button', { name: 'Guardar alimento' }).click()
+  await expect(preview.getByText('Guiso de la abuela (mío)')).toBeVisible()
+  await expect(page.getByText('Total: 865 kcal')).toBeVisible()
+  await page.getByRole('button', { name: 'Sumar 865 kcal' }).click()
+  await expect(page.getByLabel('¿Qué comiste?')).toHaveValue('')
+  await page.getByText('200 g arroz, 2 huevos 1 guiso de la abuela').click() // expand the breakdown
+  const detail = page.getByRole('list', { name: /Detalle de/ })
+  await expect(detail.getByText('200 g arroz')).toBeVisible()
+  await expect(detail.getByText('450 kcal')).toBeVisible()
+  await expect(page.getByText('450 kcal por unidad')).toBeVisible() // listed in Mis alimentos
+
+  // Solo kcal: la carga manual sigue funcionando
+  await page.getByRole('button', { name: 'Solo kcal' }).click()
   await page.getByLabel('Calorías', { exact: true }).fill('650')
   await page.getByRole('button', { name: 'Sumar kcal' }).click()
   await expect(page.getByText('650 kcal').first()).toBeVisible()
+  await expect(page.getByText('1.515', { exact: false }).first()).toBeVisible()
   await page.getByLabel('Peso de hoy en kg').fill('72,5')
-  await page.getByRole('button', { name: 'Guardar' }).click()
+  await page.getByRole('button', { name: 'Guardar', exact: true }).click()
   await expect(page.getByText('Último: 72,5 kg', { exact: false })).toBeVisible()
   await page.screenshot({ path: 'test-results/salud.png', fullPage: true })
+
+  // Hoy: carga rápida con el mismo formato
+  await page.getByRole('link', { name: /Hoy/ }).click()
+  await page.getByLabel('Comida o kcal').fill('1 banana')
+  await expect(page.getByText('≈ 107 kcal · Banana')).toBeVisible()
+  await page.getByRole('button', { name: 'Sumar comida' }).click()
+  await expect(page.getByText('1.622', { exact: false }).first()).toBeVisible()
 
   expect(errors).toEqual([])
 })

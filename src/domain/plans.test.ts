@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { marginLabel, numberedItems, parseItemList, situationLabel, suggestedDeadline, toScheduleItems } from './plans'
+import { currentItem, marginLabel, numberedItems, numberingOf, parseItemList, situationLabel, suggestedDeadline, toScheduleConfig, toScheduleItems } from './plans'
+import { buildBaseline, computePlanMetrics, projectSchedule } from './schedule'
 
 describe('parseItemList', () => {
   it('un ítem por línea, con "Módulo: ítem" opcional', () => {
@@ -67,5 +68,47 @@ describe('numberedItems', () => {
     expect(numberedItems('Room', 3)).toBe('Room 1\nRoom 2\nRoom 3')
     expect(numberedItems('  ', 2)).toBe('Ítem 1\nÍtem 2')
     expect(numberedItems('Room', 0)).toBe('')
+  })
+})
+
+describe('items done before the plan (prior)', () => {
+  // SOC-like: 62 rooms, already at room 32 → rooms 1–31 are prior.
+  const items = Array.from({ length: 62 }, (_, i) => ({
+    id: `r${i + 1}`,
+    title: `Room ${i + 1}`,
+    order: i,
+    done: i < 31,
+    prior: i < 31,
+  }))
+  const plan = { startDate: '2026-11-21', deadline: '2026-12-31', pace: 1, restWeekdays: [], blockedDates: [] }
+
+  it('toScheduleItems leaves prior items out', () => {
+    const s = toScheduleItems(items)
+    expect(s).toHaveLength(31)
+    expect(s[0]).toEqual({ id: 'r32', done: false })
+  })
+  it('the schedule starts at room 32 and only counts what is left', () => {
+    const s = toScheduleItems(items)
+    const config = toScheduleConfig(plan)
+    const baseline = buildBaseline(s, config)
+    expect(baseline.r32).toBe('2026-11-21')
+    expect(baseline.r1).toBeUndefined()
+    const m = computePlanMetrics(s, baseline, projectSchedule(s, config, '2026-11-21'), config, '2026-11-21')
+    expect(m.total).toBe(31)
+    expect(m.shouldHaveDone).toBe(1) // only today's room, not the 31 done before
+    expect(m.todayItemIds).toEqual(['r32'])
+    expect(m.estimatedEnd).toBe('2026-12-21')
+  })
+  it('currentItem is the first pending one', () => {
+    expect(currentItem(items)?.title).toBe('Room 32')
+    expect(currentItem(items.map((i) => ({ ...i, done: true })))).toBeUndefined()
+  })
+})
+
+describe('numbering', () => {
+  it('detects "Room 34" and continues it', () => {
+    expect(numberingOf(['Intro', 'Room 33', 'Room 34'])).toEqual({ prefix: 'Room', last: 34 })
+    expect(numberingOf(['Splunk basics'])).toBeNull()
+    expect(numberedItems('Room', 3, 35)).toBe('Room 35\nRoom 36\nRoom 37')
   })
 })

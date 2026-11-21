@@ -40,11 +40,35 @@ export function toScheduleConfig(p: PlanLike): ScheduleConfig {
   }
 }
 
-/** Items sorted by `order`, reduced to what the algorithm needs. */
-export function toScheduleItems(items: readonly { id: string; order: number; done: boolean; doneDate?: ISODate }[]): ScheduleItem[] {
+/**
+ * Items sorted by `order`, reduced to what the algorithm needs.
+ * Items done BEFORE the plan (`prior`, e.g. rooms 1–31 when you start at 32) are left out:
+ * they are part of the total but never scheduled, never "should have done" and never late.
+ */
+export function toScheduleItems(
+  items: readonly { id: string; order: number; done: boolean; doneDate?: ISODate; prior?: boolean }[],
+): ScheduleItem[] {
   return [...items]
+    .filter((i) => !i.prior)
     .sort((a, b) => a.order - b.order)
     .map((i) => (i.done ? { id: i.id, done: true, doneDate: i.doneDate } : { id: i.id, done: false }))
+}
+
+/** First pending item in plan order ("Vas por: Room 32"), or undefined when everything is done. */
+export function currentItem<T extends { order: number; done: boolean }>(items: readonly T[]): T | undefined {
+  return [...items].sort((a, b) => a.order - b.order).find((i) => !i.done)
+}
+
+/**
+ * Guesses how an item list is numbered so more can be appended: "Room 34" → { prefix: "Room", last: 34 }.
+ * Takes the last item that ends in a number; `null` if none does.
+ */
+export function numberingOf(titles: readonly string[]): { prefix: string; last: number } | null {
+  for (let i = titles.length - 1; i >= 0; i--) {
+    const m = /^(.*?)\s*(\d+)\s*$/.exec(titles[i])
+    if (m) return { prefix: m[1].trim(), last: Number(m[2]) }
+  }
+  return null
 }
 
 /** "✅ Al día (+2)" / "⚠️ Atrasado 3". */
@@ -77,8 +101,8 @@ export function suggestedDeadline(total: number, config: Omit<ScheduleConfig, 'd
   }
 }
 
-/** "Room" × 3 → three lines "Room 1", "Room 2", "Room 3" (ready for addItems). */
-export function numberedItems(prefix: string, count: number): string {
+/** "Room" × 3 → three lines "Room 1", "Room 2", "Room 3" (ready for addItems). `startAt` continues a list. */
+export function numberedItems(prefix: string, count: number, startAt = 1): string {
   const name = prefix.trim() || 'Ítem'
-  return Array.from({ length: Math.max(0, Math.floor(count)) }, (_, i) => `${name} ${i + 1}`).join('\n')
+  return Array.from({ length: Math.max(0, Math.floor(count)) }, (_, i) => `${name} ${startAt + i}`).join('\n')
 }

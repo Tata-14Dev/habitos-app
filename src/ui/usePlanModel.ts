@@ -34,7 +34,7 @@ export function usePlanModel(plan: Plan | undefined, items: PlanItem[] | undefin
         : { ok: false, error: new Error('Sin proyección') }
     const pending = new Set<string>()
     for (const r of [projection, metrics]) if (!r.ok && 'notImplemented' in r) pending.add(r.notImplemented)
-    const missingBaseline = items.some((i) => !plan.baseline[i.id])
+    const missingBaseline = items.some((i) => !i.prior && !plan.baseline[i.id])
     if (missingBaseline) pending.add('buildBaseline')
     return {
       projection,
@@ -47,7 +47,7 @@ export function usePlanModel(plan: Plan | undefined, items: PlanItem[] | undefin
 
   // Side effects: fill missing baseline dates once buildBaseline works; publish projection for reminders.
   useEffect(() => {
-    if (plan && items?.some((i) => !plan.baseline[i.id])) void ensureBaseline(plan.id)
+    if (plan && items?.some((i) => !i.prior && !plan.baseline[i.id])) void ensureBaseline(plan.id)
   }, [plan, items])
   useEffect(() => {
     if (plan && model?.projection.ok) void saveProjection(plan.id, model.projection.value, today)

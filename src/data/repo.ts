@@ -78,6 +78,8 @@ export async function setMood(date: ISODate, values: { mood?: number; motivation
 
 export interface PlanInput {
   name: string
+  /** Item plans: how many of the first items were already done before the plan. */
+  priorCount?: number
   kind: PlanKind
   unit?: string
   /** Amount plans: total to reach. */
@@ -114,7 +116,7 @@ export async function createPlan(input: PlanInput): Promise<Plan> {
     baseline: {},
     createdAt: nowStamp(),
   })
-  if (input.itemsText?.trim()) await addItems(planId, input.itemsText)
+  if (input.itemsText?.trim()) await addItems(planId, input.itemsText, input.priorCount ?? 0)
   return plan
 }
 
@@ -136,14 +138,24 @@ async function planItems(planId: string): Promise<PlanItem[]> {
   return (await db.planItems.where('planId').equals(planId).toArray()).filter(alive).sort((a, b) => a.order - b.order)
 }
 
-/** Paste a list: one item per line, optionally "Módulo: ítem". */
-export async function addItems(planId: string, text: string): Promise<number> {
+/**
+ * Paste a list: one item per line, optionally "Módulo: ítem".
+ * `priorCount`: the first N new items were already done before the plan (they're not scheduled).
+ */
+export async function addItems(planId: string, text: string, priorCount = 0): Promise<number> {
   const parsed = parseItemList(text)
   const existing = await planItems(planId)
   const start = existing.length ? existing[existing.length - 1].order + 1 : 0
   await store.putMany(
     'planItems',
-    parsed.map((p, i) => ({ id: newId(), planId, title: p.title, section: p.section, order: start + i, done: false })),
+    parsed.map((p, i) => ({
+      id: newId(),
+      planId,
+      title: p.title,
+      section: p.section,
+      order: start + i,
+      ...(i < priorCount ? { done: true, prior: true } : { done: false }),
+    })),
   )
   await ensureBaseline(planId)
   return parsed.length
@@ -157,9 +169,25 @@ export async function deleteItem(id: string) {
   await store.softDelete('planItems', [id])
 }
 
-/** Mark done (default today) or undone. */
+/** Mark done (default today) or undone. Undoing an item done before the plan brings it back into the plan. */
 export async function setItemDone(id: string, done: boolean, date: ISODate = todayISO()) {
-  await store.patch('planItems', id, done ? { done: true, doneDate: date } : { done: false, doneDate: undefined })
+  await store.patch('planItems', id, done ? { done: true, doneDate: date, prior: false } : { done: false, doneDate: undefined, prior: false })
+}
+
+/**
+ * "Ya hice hasta el ítem N": items 1…N (plan order) become done-before-the-plan, the rest that
+ * were marked like that go back to pending, and the plan is re-planned from today so the
+ * schedule starts at N + 1. Items done during the plan keep their dates.
+ */
+export async function setPriorUntil(planId: string, n: number, today: ISODate = todayISO()) {
+  const items = await planItems(planId)
+  const changed = items.flatMap((it, idx) => {
+    // Pending items up to N become "done before the plan"; ones already done (before or during the plan) stay as they are.
+    if (idx < n) return !it.done ? [{ ...it, done: true, doneDate: undefined, prior: true }] : []
+    return it.prior ? [{ ...it, done: false, doneDate: undefined, prior: false }] : []
+  })
+  if (changed.length) await store.putMany('planItems', changed)
+  return replanFromToday(planId, today)
 }
 
 export async function reorderItems(planId: string, orderedIds: string[]) {
@@ -180,7 +208,7 @@ export async function ensureBaseline(planId: string): Promise<'ok' | 'pending' |
   const plan = await db.plans.get(planId)
   if (!alive(plan)) return 'unchanged'
   const items = await planItems(planId)
-  const missing = items.filter((i) => !plan.baseline[i.id])
+  const missing = items.filter((i) => !i.prior && !plan.baseline[i.id])
   if (!missing.length) return 'unchanged'
   const r = safeCall(() => buildBaseline(toScheduleItems(items), toScheduleConfig(plan)))
   if (!r.ok) return 'pending'

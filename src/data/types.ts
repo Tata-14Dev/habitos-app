@@ -80,6 +80,8 @@ export interface PlanItem extends SyncFields {
   order: number
   done: boolean
   doneDate?: ISODate
+  /** Done before the plan started (e.g. rooms 1–31 when you start at 32): counts in the total, never scheduled. */
+  prior?: boolean
 }
 
 /** Amount plans: how much was done on a day (id === `${planId}|${date}`, one record per plan and day). */

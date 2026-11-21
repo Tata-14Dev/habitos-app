@@ -13,6 +13,8 @@ Hay dos tipos de plan. Lo elegís al crearlo, en **Planes → + Nuevo**:
 - **📋 Por ítems:** una lista (rooms, lecciones, capítulos). Marcás cada ítem cuando lo terminás.
 - **⏱️ Por cantidad:** un total (horas, páginas, ejercicios). Registrás cuánto hiciste cada día con los botones rápidos (+2 horas, +1 hora…) o con una cantidad a mano.
 
+Si ya ibas por la mitad (por ejemplo, room 32 de 62), poné "¿Cuántos en total? 62" y "Ya hiciste hasta el 31". En un plan que ya existe: **+ Ítems → Numerados** para agregar hasta el número que falte y **📍 Ya hice hasta el ítem…** para decir por dónde vas.
+
 Al crearlo alcanza con el nombre, cuántos son (o el total) y el ritmo: la fecha de fin se calcula sola desde hoy. El inicio, los días de descanso y una fecha límite propia están en "Más opciones".
 
 En los dos casos, la fecha de fin, el margen y el ritmo necesario se recalculan con cada avance. Hacer de más adelanta el fin y nunca corre hacia adelante lo que te toca mañana.

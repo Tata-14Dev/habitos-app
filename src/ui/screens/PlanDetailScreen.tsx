@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { compareISO, formatAR, type ISODate } from '../../domain/dates'
-import { marginLabel, situationLabel } from '../../domain/plans'
+import { currentItem, marginLabel, numberedItems, numberingOf, situationLabel } from '../../domain/plans'
 import { formatAmount } from '../../domain/progress'
 import type { PlanMetrics } from '../../domain/schedule'
 import {
@@ -13,11 +13,12 @@ import {
   reorderItems,
   saveMilestone,
   setItemDone,
+  setPriorUntil,
   updateItem,
   updatePlan,
 } from '../../data/repo'
 import type { Milestone, Plan, PlanItem } from '../../data/types'
-import { Button, Card, Check, cx, Empty, Field, inputCls, PendingNotice, ProgressBar, SectionTitle, Sheet } from '../components'
+import { Button, Card, Check, cx, Empty, Field, inputCls, MoreOptions, PendingNotice, ProgressBar, SectionTitle, Sheet } from '../components'
 import { useMilestones, usePlan, usePlanItems, usePlanLogs, useToday } from '../hooks'
 import { SortableList } from '../Sortable'
 import { usePlanModel, type PlanModel } from '../usePlanModel'
@@ -34,11 +35,14 @@ export function PlanDetailScreen() {
   const [editing, setEditing] = useState(false)
   const [pasting, setPasting] = useState(false)
   const [editItem, setEditItem] = useState<PlanItem | null>(null)
+  const [settingStart, setSettingStart] = useState(false)
   const navigate = useNavigate()
 
   if (plan === undefined || !items || !logs || !model) return <Empty>Cargando…</Empty>
   if (!plan || plan.deletedAt) return <Empty>Este plan no existe.</Empty>
   const isAmount = plan.kind === 'amount'
+  const prior = items.filter((i) => i.prior)
+  const inPlan = items.filter((i) => !i.prior)
 
   return (
     <div className="space-y-5">
@@ -66,16 +70,28 @@ export function PlanDetailScreen() {
         {items.length === 0 ? (
           <Empty>Pegá la lista de ítems con "+ Ítems".</Empty>
         ) : (
-          <>
+          <div className="space-y-3">
+            {prior.length > 0 && (
+              <MoreOptions summary={`✓ ${prior.length} hechos antes del plan`} hint={`${prior[0].title} → ${prior[prior.length - 1].title}`}>
+                <ul className="divide-y divide-line dark:divide-neutral-700">
+                  {prior.map((it) => (
+                    <li key={it.id}>
+                      <ItemRow item={it} plan={plan} model={model} today={today} handle={<span />} onEdit={() => setEditItem(it)} />
+                    </li>
+                  ))}
+                </ul>
+              </MoreOptions>
+            )}
             <SortableList
-              items={items}
-              onReorder={(ids) => void reorderItems(plan.id, ids)}
+              items={inPlan}
+              // Prior items keep the first positions; the rest are reordered after them.
+              onReorder={(ids) => void reorderItems(plan.id, [...prior.map((p) => p.id), ...ids])}
               className="divide-y divide-line dark:divide-neutral-700"
               render={(it, handle) => (
                 <ItemRow item={it} plan={plan} model={model} today={today} handle={handle} onEdit={() => setEditItem(it)} />
               )}
             />
-          </>
+          </div>
         )}
       </Card>
         </>
@@ -86,6 +102,11 @@ export function PlanDetailScreen() {
       <Card>
         <SectionTitle>Acciones</SectionTitle>
         <div className="space-y-2">
+          {!isAmount && items.length > 0 && (
+            <Button className="w-full" onClick={() => setSettingStart(true)}>
+              📍 Ya hice hasta el ítem…
+            </Button>
+          )}
           {!isAmount && (
           <Button
             className="w-full"
@@ -114,7 +135,7 @@ export function PlanDetailScreen() {
       <Sheet open={editing} onClose={() => setEditing(false)} title="Editar plan">
         <PlanForm
           plan={plan}
-          total={isAmount ? plan.target : items.length}
+          total={isAmount ? plan.target : inPlan.length}
           submitLabel="Guardar"
           onSubmit={async (v) => {
             await updatePlan(plan.id, {
@@ -136,7 +157,11 @@ export function PlanDetailScreen() {
       </Sheet>
 
       <Sheet open={pasting} onClose={() => setPasting(false)} title="Agregar ítems">
-        <PasteItems planId={plan.id} onDone={() => setPasting(false)} />
+        <PasteItems planId={plan.id} titles={items.map((i) => i.title)} onDone={() => setPasting(false)} />
+      </Sheet>
+
+      <Sheet open={settingStart} onClose={() => setSettingStart(false)} title="¿Por dónde vas?">
+        {settingStart && <PriorForm plan={plan} items={items} today={today} onDone={() => setSettingStart(false)} />}
       </Sheet>
 
       <Sheet open={!!editItem} onClose={() => setEditItem(null)} title="Ítem">
@@ -159,6 +184,7 @@ function Dashboard({ plan, model, items, today }: { plan: Plan; model: PlanModel
         </span>
       </div>
       <ProgressBar value={model.total ? model.doneCount / model.total : null} />
+      <CurrentLine items={items} />
 
       <div className="mt-3">
         <PendingNotice fns={model.pending} />
@@ -238,7 +264,9 @@ function ItemRow({
         <span className={cx('block truncate', item.done && 'text-ink-soft line-through')}>{item.title}</span>
         <span className="block truncate text-xs text-ink-soft dark:text-neutral-400">
           {item.section && `${item.section} · `}
-          {item.done && item.doneDate ? (
+          {item.prior ? (
+            <>Hecho antes del plan</>
+          ) : item.done && item.doneDate ? (
             <>Hecho el {formatAR(item.doneDate, false)}</>
           ) : proj ? (
             <>
@@ -304,11 +332,84 @@ function ItemForm({ item, onDone }: { item: PlanItem; onDone: () => void }) {
   )
 }
 
-function PasteItems({ planId, onDone }: { planId: string; onDone: () => void }) {
+/** "Vas por: Room 32" (first pending item), or nothing when the plan is done. */
+export function CurrentLine({ items }: { items: PlanItem[] }) {
+  const cur = currentItem(items)
+  if (!cur) return null
+  return (
+    <p className="mt-2 text-sm">
+      📍 Vas por: <strong>{cur.title}</strong>
+    </p>
+  )
+}
+
+/** "Ya hice hasta el ítem N": everything up to N counts as done before the plan; re-plans from today. */
+function PriorForm({ plan, items, today, onDone }: { plan: Plan; items: PlanItem[]; today: ISODate; onDone: () => void }) {
+  const firstPending = items.findIndex((i) => !i.done)
+  const [n, setN] = useState(String(firstPending > 0 ? firstPending : items.filter((i) => i.prior).length || ''))
+  const num = Number(n)
+  const valid = n.trim() !== '' && Number.isInteger(num) && num >= 0 && num < items.length
+  const next = valid ? items[num] : undefined
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (valid) void setPriorUntil(plan.id, num, today).then(onDone)
+      }}
+    >
+      <Field label={`Ya hice hasta el ítem número (de ${items.length})`}>
+        <input inputMode="numeric" className={inputCls} value={n} onChange={(e) => setN(e.target.value)} autoFocus />
+      </Field>
+      <p className="text-sm text-ink-soft dark:text-neutral-400">
+        {valid && next
+          ? `Del 1 al ${num} quedan como hechos antes del plan (no cuentan como atraso ni como hechos hoy). Arrancás en ${next.title} y el cronograma se rearma desde hoy con los ${items.length - num} que faltan.`
+          : `Poné un número entre 0 y ${items.length - 1}. Si te faltan ítems, primero agregalos con "+ Ítems".`}
+      </p>
+      <Button type="submit" variant="primary" className="w-full" disabled={!valid}>
+        Arrancar desde {next ? next.title : '…'}
+      </Button>
+    </form>
+  )
+}
+
+function PasteItems({ planId, titles, onDone }: { planId: string; titles: string[]; onDone: () => void }) {
+  const numbering = numberingOf(titles)
+  const [mode, setMode] = useState<'count' | 'list'>(numbering ? 'count' : 'list')
+  const [until, setUntil] = useState('')
+  const [prefix, setPrefix] = useState(numbering?.prefix ?? '')
   const [text, setText] = useState('')
+  const last = numbering?.last ?? titles.length
+  const untilNum = Number(until)
+  const extra = Number.isInteger(untilNum) && untilNum > last && untilNum - last <= 1000 ? untilNum - last : 0
+  if (mode === 'count') {
+    const name = prefix.trim() || 'Ítem'
+    return (
+      <div className="space-y-4">
+        <ModeSwitch mode={mode} setMode={setMode} />
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Se llaman">
+            <input className={inputCls} value={prefix} onChange={(e) => setPrefix(e.target.value)} placeholder="Room" />
+          </Field>
+          <Field label="Agregar hasta el N°">
+            <input inputMode="numeric" className={inputCls} value={until} onChange={(e) => setUntil(e.target.value)} placeholder={String(last + 10)} autoFocus />
+          </Field>
+        </div>
+        <p className="text-sm text-ink-soft dark:text-neutral-400">
+          {extra
+            ? `Se agregan ${name} ${last + 1} a ${name} ${untilNum} (${extra}).`
+            : `El último es el ${last}. Poné hasta qué número querés llegar.`}
+        </p>
+        <Button variant="primary" className="w-full" disabled={!extra} onClick={() => void addItems(planId, numberedItems(prefix, extra, last + 1)).then(onDone)}>
+          Agregar {extra || ''} {extra === 1 ? 'ítem' : 'ítems'}
+        </Button>
+      </div>
+    )
+  }
   const count = text.split(/\r?\n/).filter((l) => l.trim()).length
   return (
     <div className="space-y-3">
+      <ModeSwitch mode={mode} setMode={setMode} />
       <textarea
         className={cx(inputCls, 'min-h-48 font-mono text-sm')}
         value={text}
@@ -319,6 +420,29 @@ function PasteItems({ planId, onDone }: { planId: string; onDone: () => void }) 
       <Button variant="primary" className="w-full" disabled={!count} onClick={() => void addItems(planId, text).then(onDone)}>
         Agregar {count || ''} {count === 1 ? 'ítem' : 'ítems'}
       </Button>
+    </div>
+  )
+}
+
+function ModeSwitch({ mode, setMode }: { mode: 'count' | 'list'; setMode: (m: 'count' | 'list') => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-1 rounded-xl bg-paper p-1 dark:bg-neutral-900">
+      {(
+        [
+          ['count', 'Numerados'],
+          ['list', 'Pegar la lista'],
+        ] as const
+      ).map(([v, label]) => (
+        <button
+          type="button"
+          key={v}
+          aria-pressed={mode === v}
+          onClick={() => setMode(v)}
+          className={cx('min-h-10 rounded-lg text-sm', mode === v ? 'bg-white font-medium shadow-sm dark:bg-neutral-700' : 'text-ink-soft dark:text-neutral-400')}
+        >
+          {label}
+        </button>
+      ))}
     </div>
   )
 }

@@ -12,6 +12,7 @@ import { useDayMoods, useHabitLogs, useHabits, usePlanItems, usePlans, useSettin
 import { usePlanModel } from '../usePlanModel'
 import { AmountToday } from './AmountPlan'
 import { TodayHabitList, WeeklyGoalList } from './HabitWidgets'
+import { CurrentLine } from './PlanDetailScreen'
 import { HealthTodayCard } from './HealthScreen'
 
 export function TodayScreen() {
@@ -177,6 +178,7 @@ function PlanToday({ plan, today }: { plan: Plan; today: string }) {
         )}
       </div>
       <ProgressBar value={model.total ? model.doneCount / model.total : null} />
+      <CurrentLine items={items} />
       <PendingNotice fns={model.pending} />
       {model.metrics.ok && (
         <ul className="mt-2 divide-y divide-line dark:divide-neutral-700">

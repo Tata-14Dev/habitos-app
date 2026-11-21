@@ -59,6 +59,8 @@ export function PlanForm({
   // Items: a count ("34", named "Room" → Room 1…34) or a pasted list.
   const [itemsMode, setItemsMode] = useState<'count' | 'list'>('count')
   const [count, setCount] = useState('')
+  // "Ya hiciste hasta el": the first N items were done before the plan; the schedule starts at N + 1.
+  const [doneUntil, setDoneUntil] = useState('')
   const [prefix, setPrefix] = useState('')
   const [itemsText, setItemsText] = useState('')
   const [pace, setPace] = useState(String(plan?.pace ?? 1).replace('.', ','))
@@ -82,9 +84,13 @@ export function PlanForm({
   const blockedValid = blockedParsed.every(Boolean)
   const blockedDates = [...new Set(blockedParsed.filter(Boolean) as ISODate[])].sort()
   const listCount = parseItemList(itemsText).length
+  const itemsTotal = itemsMode === 'count' ? countNum : listCount
+  const priorNum = doneUntil.trim() ? Number(doneUntil) : 0
+  const priorValid = Number.isInteger(priorNum) && priorNum >= 0 && (priorNum < itemsTotal || itemsTotal === 0)
 
   // How much there is to do: target (amount), items to create (new) or existing ones (edit).
-  const total = isAmount ? targetNum : editing ? (currentTotal ?? 0) : itemsMode === 'count' ? countNum : listCount
+  // What's left to schedule: target (amount), items minus those already done (new) or the plan's remaining ones (edit).
+  const total = isAmount ? targetNum : editing ? (currentTotal ?? 0) : itemsTotal - (priorValid ? priorNum : 0)
   const autoEnd = startDate && paceNum > 0 && blockedValid ? suggestedDeadline(total, { startDate, pace: paceNum, restWeekdays: rest, blockedDates }) : null
   const finalDeadline = customDeadline ? deadline : (autoEnd ?? '')
   const unitLabel = unit.trim() || (isAmount ? 'unidades' : 'ítems')
@@ -98,7 +104,7 @@ export function PlanForm({
     blockedValid &&
     rest.length < 7 &&
     (!isAmount || (targetNum > 0 && !!unit.trim())) &&
-    (isAmount || editing || itemsMode === 'list' || (Number.isInteger(countNum) && countNum > 0 && countNum <= 1000))
+    (isAmount || editing || ((itemsMode === 'list' || (Number.isInteger(countNum) && countNum > 0 && countNum <= 1000)) && priorValid))
 
   const toggleDay = (d: number) => setRest((r) => (r.includes(d) ? r.filter((x) => x !== d) : [...r, d]))
 
@@ -120,6 +126,7 @@ export function PlanForm({
           blockedDates,
           withHabit,
           itemsText: isAmount || editing ? '' : itemsMode === 'count' ? numberedItems(prefix, countNum) : itemsText,
+          priorCount: isAmount || editing ? 0 : priorNum,
         })
       }}
     >
@@ -173,23 +180,40 @@ export function PlanForm({
               ]}
             />
             {itemsMode === 'count' ? (
-              <div className="grid grid-cols-[6rem_1fr] gap-3">
-                <Field label="¿Cuántos?">
-                  <input inputMode="numeric" className={inputCls} value={count} onChange={(e) => setCount(e.target.value)} placeholder="34" />
-                </Field>
-                <Field label="Se llaman (opcional)" hint={`Quedan: ${numberedItems(prefix, Math.min(2, countNum || 2)).replace('\n', ', ')}…`}>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="¿Cuántos en total?">
+                    <input inputMode="numeric" className={inputCls} value={count} onChange={(e) => setCount(e.target.value)} placeholder="62" />
+                  </Field>
+                  <Field label="Ya hiciste hasta el (opcional)">
+                    <input inputMode="numeric" className={inputCls} value={doneUntil} onChange={(e) => setDoneUntil(e.target.value)} placeholder="0" />
+                  </Field>
+                </div>
+                <Field label="Se llaman (opcional)" hint={`Quedan: ${numberedItems(prefix, 2).replace('\n', ', ')}…`}>
                   <input className={inputCls} value={prefix} onChange={(e) => setPrefix(e.target.value)} placeholder="Room" />
                 </Field>
               </div>
             ) : (
-              <Field label={`Uno por línea, opcional "Módulo: ítem"${listCount ? ` · ${listCount}` : ''}`}>
-                <textarea
-                  className={cx(inputCls, 'min-h-32 font-mono text-sm')}
-                  value={itemsText}
-                  onChange={(e) => setItemsText(e.target.value)}
-                  placeholder={'Intro: Room 1\nIntro: Room 2\nSIEM: Splunk Basics'}
-                />
-              </Field>
+              <div className="space-y-3">
+                <Field label={`Uno por línea, opcional "Módulo: ítem"${listCount ? ` · ${listCount}` : ''}`}>
+                  <textarea
+                    className={cx(inputCls, 'min-h-32 font-mono text-sm')}
+                    value={itemsText}
+                    onChange={(e) => setItemsText(e.target.value)}
+                    placeholder={'Intro: Room 1\nIntro: Room 2\nSIEM: Splunk Basics'}
+                  />
+                </Field>
+                <Field label="Ya hiciste los primeros (opcional)">
+                  <input inputMode="numeric" className={inputCls} value={doneUntil} onChange={(e) => setDoneUntil(e.target.value)} placeholder="0" />
+                </Field>
+              </div>
+            )}
+            {priorNum > 0 && itemsTotal > 0 && (
+              <p className={cx('text-sm', priorValid ? 'text-ink-soft dark:text-neutral-400' : 'text-amber-700 dark:text-amber-400')}>
+                {priorValid
+                  ? `Del 1 al ${priorNum} quedan como hechos antes del plan. El plan arranca en el ${priorNum + 1} y reparte los ${itemsTotal - priorNum} que faltan.`
+                  : `⚠️ Tiene que ser menor que el total (${itemsTotal}).`}
+              </p>
             )}
           </div>
         )

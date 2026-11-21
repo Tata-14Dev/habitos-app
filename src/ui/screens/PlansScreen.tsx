@@ -9,6 +9,7 @@ import { Button, Card, Empty, ProgressBar, SectionTitle, Sheet } from '../compon
 import { usePlanItems, usePlans, useToday } from '../hooks'
 import { usePlanModel } from '../usePlanModel'
 import { AmountSummary } from './AmountPlan'
+import { CurrentLine } from './PlanDetailScreen'
 import { PlanForm } from './PlanForm'
 
 export function PlansScreen() {
@@ -74,6 +75,7 @@ function ItemsSummary({ plan, today }: { plan: Plan; today: string }) {
           {model?.metrics.ok && model.metrics.value.marginDays !== null && <span>{marginLabel(model.metrics.value.marginDays)}</span>}
         </div>
         <ProgressBar value={model?.total ? model.doneCount / model.total : null} />
+        {items && <CurrentLine items={items} />}
     </>
   )
 }

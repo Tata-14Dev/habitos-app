@@ -61,7 +61,7 @@ test('flujo básico: ejemplo, plan, ítems, hábitos y dictado', async ({ page }
   await page.getByRole('link', { name: /Planes/ }).click()
   await page.getByRole('button', { name: '+ Nuevo' }).click()
   await page.getByLabel('Nombre', { exact: true }).fill('Curso rápido')
-  await page.getByLabel('¿Cuántos?').fill('34')
+  await page.getByLabel('¿Cuántos en total?').fill('34')
   await page.getByLabel(/Se llaman/).fill('Room')
   const expectedEnd = await page.evaluate(() => {
     const d = new Date()
@@ -72,6 +72,41 @@ test('flujo básico: ejemplo, plan, ítems, hábitos y dictado', async ({ page }
   await page.getByRole('button', { name: 'Crear plan' }).click()
   await expect(page.getByText('0/34')).toBeVisible()
   await expect(page.getByText('Room 34', { exact: true })).toBeVisible()
+
+  // Plan que ya empezaste: 62 en total, ya hiciste hasta el 31 → arranca en Room 32
+  await page.getByRole('link', { name: /Planes/ }).click()
+  await page.getByRole('button', { name: '+ Nuevo' }).click()
+  await page.getByLabel('Nombre', { exact: true }).fill('SOC real')
+  await page.getByLabel('¿Cuántos en total?').fill('62')
+  await page.getByLabel(/Ya hiciste hasta el/).fill('31')
+  await page.getByLabel(/Se llaman/).fill('Room')
+  await expect(page.getByText(/El plan arranca en el 32 y reparte los 31 que faltan/)).toBeVisible()
+  const end31 = await page.evaluate(() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 30)
+    return d.toLocaleDateString('es-AR', { day: 'numeric' })
+  })
+  await expect(page.getByText(/Terminás el/)).toContainText(end31)
+  await page.getByRole('button', { name: 'Crear plan' }).click()
+  await expect(page.getByText('31/62')).toBeVisible()
+  await expect(page.getByText('Vas por:')).toContainText('Room 32')
+  await expect(page.getByText('31 hechos antes del plan')).toBeVisible()
+  await expect(page.getByText(/Debería llevar 1, llevo 0/)).toBeVisible() // only today's room, not the 31 before
+
+  // Plan existente: agregar hasta el 40 y decir "ya hice hasta el 10"
+  await page.getByRole('link', { name: /Planes/ }).click()
+  await page.getByText('SOC Level 1 · TryHackMe').click()
+  await page.getByRole('button', { name: '+ Ítems' }).click()
+  await page.getByLabel('Agregar hasta el N°').fill('40')
+  await page.getByRole('button', { name: 'Agregar 6 ítems' }).click()
+  await expect(page.getByText('Room 40', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: /Ya hice hasta el ítem/ }).click()
+  await page.getByLabel(/Ya hice hasta el ítem número/).fill('10')
+  await page.getByRole('button', { name: 'Arrancar desde Room 11' }).click()
+  await expect(page.getByText('Vas por:')).toContainText('Room 11')
+  await expect(page.getByText('10/40')).toBeVisible()
+  await page.screenshot({ path: 'test-results/plan-desde-11.png', fullPage: true })
+
   await page.getByRole('link', { name: /Planes/ }).click()
   await page.getByText('Inglés').first().click()
 

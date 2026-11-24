@@ -4,7 +4,7 @@
 
 **Seguimiento de hábitos y planificador de estudio local-first, para el teléfono y la computadora.** Es una PWA instalable que funciona completamente offline, sincroniza entre dispositivos con Supabase y manda una notificación push a la mañana al iPhone.
 
-> **Demo:** [habitos-app-vtve.vercel.app](https://habitos-app-vtve.vercel.app) (sin cuenta funciona en modo local) · 🇬🇧 [Read in English](README.md)
+> **Demo:** [abrila con datos de ejemplo](https://habitos-app-vtve.vercel.app/?demo=1): seis semanas de hábitos, un curso a mitad de camino, gráficos y salud, en una base local aparte (sin cuenta) · 🇬🇧 [Read in English](README.md)
 
 <p align="center">
   <img src="docs/screenshots/today.png" width="210" alt="Pantalla Hoy: tareas dictadas separadas en una lista">

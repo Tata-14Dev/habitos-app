@@ -13,6 +13,7 @@ import { usePlanModel } from '../usePlanModel'
 import { AmountToday } from './AmountPlan'
 import { TodayHabitList, WeeklyGoalList } from './HabitWidgets'
 import { CurrentLine } from './CurrentLine'
+import { DEMO, enterDemo } from '../../data/demoFlag'
 
 // Only loaded when health tracking is on (it pulls the food dictionary and charts).
 const HealthTodayCard = lazy(() => import('./HealthScreen').then((m) => ({ default: m.HealthTodayCard })))
@@ -45,6 +46,18 @@ export function TodayScreen() {
           {briefingLine(pendingTasks, dueToday.length - ratio.done)}
         </p>
       </header>
+
+      {!DEMO && habits?.length === 0 && plans?.length === 0 && (
+        <Card className="border-2 border-dashed border-progress/60">
+          <p className="font-medium">¿Primera vez?</p>
+          <p className="mt-1 text-sm text-ink-soft dark:text-neutral-400">
+            Mirá la app con seis semanas de datos de ejemplo: hábitos, un curso a mitad de camino, gráficos y salud. No toca tus datos.
+          </p>
+          <Button variant="primary" className="mt-3 w-full" onClick={enterDemo}>
+            🧪 Probar la demo
+          </Button>
+        </Card>
+      )}
 
       <DictationCard today={today} />
 

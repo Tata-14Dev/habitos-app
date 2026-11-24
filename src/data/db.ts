@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie'
+import { DEMO, DEMO_DB_NAME } from './demoFlag'
 import type { CollectionMap, CollectionName } from './types'
 
 /** A local change not yet pushed to the server. */
@@ -70,4 +71,5 @@ export class HabitosDB extends Dexie {
   }
 }
 
-export const db = new HabitosDB()
+// Demo mode uses its own database, so sample data never mixes with (or syncs over) real data.
+export const db = new HabitosDB(DEMO ? DEMO_DB_NAME : 'habitos')

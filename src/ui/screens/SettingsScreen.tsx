@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { exportBackup, downloadFile, importBackup } from '../../data/backup'
 import { updateSettings } from '../../data/repo'
+import { DEMO, enterDemo, exitDemo } from '../../data/demoFlag'
 import { loadExample } from '../../data/seed'
 import { syncConfigured } from '../../data/supabase'
 import { signIn, signOut, signUp, syncNow } from '../../data/sync'
@@ -75,6 +76,15 @@ export function SettingsScreen() {
       <Card>
         <SectionTitle>Datos</SectionTitle>
         <div className="space-y-2">
+          {DEMO ? (
+            <Button className="w-full" onClick={exitDemo}>
+              🧪 Salir del modo demo
+            </Button>
+          ) : (
+            <Button className="w-full" onClick={enterDemo}>
+              🧪 Probar el modo demo (datos de ejemplo aparte)
+            </Button>
+          )}
           <Button
             className="w-full"
             onClick={async () => {

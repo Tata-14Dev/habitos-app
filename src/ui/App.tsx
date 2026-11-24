@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ComponentType } from 'react'
 import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom'
 import { cx } from './components'
+import { DEMO, exitDemo } from '../data/demoFlag'
 import { useSettings, useSyncState } from './hooks'
 import { TodayScreen } from './screens/TodayScreen'
 
@@ -30,6 +31,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <div className="mx-auto min-h-dvh max-w-xl px-4 pb-28 pt-[max(0.5rem,env(safe-area-inset-top))]">
+        {DEMO && <DemoBanner />}
         <SyncBadge />
         <Suspense fallback={<p className="py-16 text-center text-ink-soft">Cargando…</p>}>
         <Routes>
@@ -66,6 +68,18 @@ export default function App() {
         </ul>
       </nav>
     </BrowserRouter>
+  )
+}
+
+/** Sticky notice while browsing sample data. */
+function DemoBanner() {
+  return (
+    <div className="sticky top-0 z-30 -mx-4 mb-2 flex items-center justify-between gap-2 bg-amber-100 px-4 py-2 text-sm text-amber-950 dark:bg-amber-900 dark:text-amber-50">
+      <span>🧪 Modo demo: datos de ejemplo, no se guardan en ninguna cuenta.</span>
+      <button className="shrink-0 rounded-lg bg-white/70 px-3 py-1 font-medium dark:bg-black/30" onClick={exitDemo}>
+        Salir
+      </button>
+    </div>
   )
 }
 

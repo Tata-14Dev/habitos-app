@@ -1,5 +1,7 @@
 # Hábitos
 
+[![CI](https://github.com/Tata-14Dev/habitos-app/actions/workflows/ci.yml/badge.svg)](https://github.com/Tata-14Dev/habitos-app/actions/workflows/ci.yml)
+
 **A local-first habit tracker and study planner for phone and desktop.** It's an installable PWA that works fully offline, syncs between devices through Supabase, and sends a morning push notification to your iPhone.
 
 > **Live demo:** [habitos-app-vtve.vercel.app](https://habitos-app-vtve.vercel.app) (works in local-only mode without an account) · 🇦🇷 [Leer en español](README.es.md) · The app's UI is in Argentine Spanish.

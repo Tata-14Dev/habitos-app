@@ -1,5 +1,7 @@
 # Hábitos
 
+[![CI](https://github.com/Tata-14Dev/habitos-app/actions/workflows/ci.yml/badge.svg)](https://github.com/Tata-14Dev/habitos-app/actions/workflows/ci.yml)
+
 **Seguimiento de hábitos y planificador de estudio local-first, para el teléfono y la computadora.** Es una PWA instalable que funciona completamente offline, sincroniza entre dispositivos con Supabase y manda una notificación push a la mañana al iPhone.
 
 > **Demo:** [habitos-app-vtve.vercel.app](https://habitos-app-vtve.vercel.app) (sin cuenta funciona en modo local) · 🇬🇧 [Read in English](README.md)

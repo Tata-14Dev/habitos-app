@@ -142,6 +142,18 @@ The deciding and message-building logic lives in `_shared/reminder.ts`, a pure m
 - Only *Today* ships in the initial bundle. Every other screen, Recharts and the food dictionary are lazy-loaded, which brought the initial JS from 358 kB to about 195 kB gzipped.
 - Dexie asks for persistent storage, so iOS doesn't evict the data.
 
+## Theming
+
+Colors are CSS variables on `<html>` (`--c-primary`, `--c-accent`, paper/ink and the whole neutral scale), and Tailwind's tokens point at them. Switching theme or light/dark mode rewrites those variables; charts read the same palette through a hook, because Recharts needs real color values.
+
+The palette is **generated, not hand-picked**. For each of six hues, a script computes in OKLCH:
+
+- a button tone per mode, with text on it ≥ 4.5:1;
+- a chart tone inside the lightness band, with chroma ≥ 0.1 and ≥ 3:1 on the surface (cyan can't be both dark and saturated in sRGB, so its lightness is searched rather than fixed);
+- a 5-step shade ramp (monotone, visible steps, light end ≥ 2:1 on the surface).
+
+Then it runs the dataviz validator on every primary + accent pair, in both modes and on both bases. 12 of the 15 pairs pass and are stored in `COMPATIBLE`; the picker disables the other 3: sky blue + blue and violet + blue (too similar) and green + amber (they collapse under deuteranopia). Regenerate with `node scripts/palette-gen.mjs` (needs the validator path in `DATAVIZ_VALIDATOR`). Output: [`src/ui/palette.data.ts`](../src/ui/palette.data.ts).
+
 ## Demo mode
 
 `?demo=1` (or "Probar la demo") switches the app to a **separate IndexedDB database** and disables Supabase entirely. A generator fills it with six weeks of data dated relative to today. Sample data can't mix with real data or sync to an account, and leaving the demo deletes the demo database.

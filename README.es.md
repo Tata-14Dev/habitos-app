@@ -11,10 +11,11 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/today.png" width="210" alt="Pantalla Hoy: tareas dictadas separadas en una lista">
-  <img src="docs/screenshots/habits.png" width="210" alt="Hábitos con racha actual y mejor racha">
-  <img src="docs/screenshots/month.png" width="210" alt="Grilla mensual de hábitos">
-  <img src="docs/screenshots/charts.png" width="210" alt="Porcentaje por hábito y gráfico de progreso diario">
+  <img src="docs/screenshots/today.png" width="170" alt="Hoy: tareas dictadas y el resumen del día">
+  <img src="docs/screenshots/habits.png" width="170" alt="Hábitos agrupados en mañana, tarde y noche">
+  <img src="docs/screenshots/plan.png" width="170" alt="Burn-up de un plan de estudio: real, proyección y plan original">
+  <img src="docs/screenshots/year.png" width="170" alt="Año en píxeles: un cuadrado por día según el porcentaje de hábitos cumplidos">
+  <img src="docs/screenshots/health.png" width="170" alt="Tendencia de peso con los pesajes y la línea de 7 días">
 </p>
 
 | Lighthouse (móvil, producción) | Rendimiento | Accesibilidad | Buenas prácticas | SEO |
@@ -37,6 +38,7 @@ Llevaba mis hábitos y planes de estudio en planillas. En la compu andaban bien,
 - **Notificaciones push.** Un recordatorio a la mañana con las tareas, lo que toca de cada plan y los hábitos, y un resumen semanal los domingos a la noche (porcentaje de hábitos contra la semana anterior, avance por plan y cambio de peso). Web Push a la PWA instalada en iOS: lo programa `pg_cron` y lo manda una Edge Function de Supabase, en la zona horaria de cada usuario.
 - **Burn-up y vista anual.** Cada plan grafica el plan original, el avance real y la proyección. La vista anual muestra el porcentaje de cada mes y un "año en píxeles" con todos los días.
 - **Seguimiento opcional de peso y calorías.** Se activa en Ajustes. Escribís lo que comiste (`200 g arroz, 2 huevos, 1 taza de leche`) y la app busca cada alimento en un diccionario de ~300 comidas argentinas (valores aproximados) y en «Mis alimentos», y calcula las kcal con vista previa; también podés cargar kcal directo. Ver [docs/COMIDAS.md](docs/COMIDAS.md). Todo contra un objetivo diario, más un pesaje por día. Como el peso diario varía mucho, la app muestra la tendencia de 7 días, el ritmo semanal (calculado con una recta de mínimos cuadrados sobre las últimas 4 semanas) y la fecha en que llegarías a tu peso meta a ese ritmo.
+- **Temas.** Por defecto, rosa neón con celeste ("Neón", con fondo nocturno índigo), más tres temas prearmados o uno personalizado con color principal, acento y fondo. Todos los colores se generaron en OKLCH y se validaron: texto sobre botones ≥ 4,5:1, colores de gráficos legibles sobre el fondo, escalas que se leen en orden y pares principal/acento distinguibles para personas con daltonismo. Las combinaciones que no pasan quedan deshabilitadas en el selector. La elección se sincroniza entre dispositivos.
 - **Español e inglés.** La interfaz sigue el idioma del dispositivo (o un ajuste): textos, fechas y formato de números. El dictado y la carga de comidas entienden español, porque están armados sobre frases y comidas argentinas. Un test falla si algún texto de la interfaz no tiene traducción.
 - **Modo demo.** [`?demo=1`](https://habitos-app-vtve.vercel.app/?demo=1) abre seis semanas de datos de ejemplo en una base local aparte, con la sincronización apagada, para recorrer todo sin cuenta.
 - **Respaldo.** Exportás e importás todos tus datos en JSON.

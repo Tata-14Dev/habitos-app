@@ -2,12 +2,15 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CalorieBars, WeightChart } from '../../charts/HealthCharts'
-import { addDays, formatAR, type ISODate } from '../../domain/dates'
+import { addDays, type ISODate } from '../../domain/dates'
 import { calorieSummary, dayCalories, formatKcal, formatKg, weightSeries, weightSummary } from '../../domain/health'
 import { saveWeight, updateSettings } from '../../data/repo'
 import { Button, Card, cx, Empty, Field, inputCls, ProgressBar, SectionTitle, Sheet } from '../components'
 import { useBodyWeights, useFoodEntries, useSettings, useToday } from '../hooks'
 import { FoodEntryList, MealForm, MyFoodsCard, QuickFoodForm } from './FoodLog'
+import { fmtDate } from '../format'
+import { fmtDecimal } from '../../domain/numberFormat'
+import { t, tn } from '../i18n'
 
 const parseNum = (s: string) => Number(s.replace(',', '.'))
 
@@ -25,11 +28,11 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
 function remainingLine(eaten: number, target: number | undefined): string | null {
   if (!target) return null
   const left = target - eaten
-  return left >= 0 ? `Te quedan ${formatKcal(left)} kcal` : `Te pasaste ${formatKcal(-left)} kcal`
+  return left >= 0 ? t('Te quedan {n} kcal', { n: formatKcal(left) }) : t('Te pasaste {n} kcal', { n: formatKcal(-left) })
 }
 
 function WeightForm({ today, current }: { today: ISODate; current?: number }) {
-  const [kg, setKg] = useState(current ? String(current).replace('.', ',') : '')
+  const [kg, setKg] = useState(current ? fmtDecimal(current) : '')
   const n = parseNum(kg)
   const valid = n > 20 && n < 400
   return (
@@ -40,9 +43,9 @@ function WeightForm({ today, current }: { today: ISODate; current?: number }) {
         if (valid) void saveWeight(today, n)
       }}
     >
-      <input inputMode="decimal" className={cx(inputCls, 'flex-1')} value={kg} onChange={(e) => setKg(e.target.value)} placeholder="Peso de hoy (kg)" aria-label="Peso de hoy en kg" />
+      <input inputMode="decimal" className={cx(inputCls, 'flex-1')} value={kg} onChange={(e) => setKg(e.target.value)} placeholder={t('Peso de hoy (kg)')} aria-label={t('Peso de hoy en kg')} />
       <Button type="submit" variant="primary" disabled={!valid}>
-        {current ? 'Actualizar' : 'Guardar'}
+        {current ? t('Actualizar') : t('Guardar')}
       </Button>
     </form>
   )
@@ -51,7 +54,7 @@ function WeightForm({ today, current }: { today: ISODate; current?: number }) {
 function GoalsForm({ onDone }: { onDone: () => void }) {
   const s = useSettings()
   const [kcal, setKcal] = useState(s.calorieTarget ? String(s.calorieTarget) : '')
-  const [goal, setGoal] = useState(s.weightGoal ? String(s.weightGoal).replace('.', ',') : '')
+  const [goal, setGoal] = useState(s.weightGoal ? fmtDecimal(s.weightGoal) : '')
   return (
     <form
       className="space-y-3"
@@ -62,14 +65,14 @@ function GoalsForm({ onDone }: { onDone: () => void }) {
         void updateSettings({ calorieTarget: k > 0 ? Math.round(k) : undefined, weightGoal: g > 0 ? Math.round(g * 10) / 10 : undefined }).then(onDone)
       }}
     >
-      <Field label="Calorías por día (objetivo)" hint="Dejalo vacío si no querés un objetivo.">
+      <Field label={t('Calorías por día (objetivo)')} hint={t('Dejalo vacío si no querés un objetivo.')}>
         <input inputMode="numeric" className={inputCls} value={kcal} onChange={(e) => setKcal(e.target.value)} placeholder="2000" />
       </Field>
-      <Field label="Peso meta (kg)" hint="Con al menos una semana de pesajes te estimo cuándo llegás.">
+      <Field label={t('Peso meta (kg)')} hint={t('Con al menos una semana de pesajes te estimo cuándo llegás.')}>
         <input inputMode="decimal" className={inputCls} value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="75" />
       </Field>
       <Button type="submit" variant="primary" className="w-full">
-        Guardar
+        {t('Guardar')}
       </Button>
     </form>
   )
@@ -89,7 +92,7 @@ export function HealthScreen() {
   const cal = useMemo(() => calorieSummary(food ?? [], from30, today, target, today), [food, from30, today, target])
   const ws = useMemo(() => weightSummary(weights ?? [], settings.weightGoal, today), [weights, settings.weightGoal, today])
   const series = useMemo(
-    () => weightSeries((weights ?? []).filter((w) => w.date >= addDays(today, -89))).map((p) => ({ ...p, label: formatAR(p.date, false) })),
+    () => weightSeries((weights ?? []).filter((w) => w.date >= addDays(today, -89))).map((p) => ({ ...p, label: fmtDate(p.date, false) })),
     [weights, today],
   )
   const todayWeight = (weights ?? []).find((w) => w.date === today)
@@ -97,13 +100,13 @@ export function HealthScreen() {
   return (
     <div className="space-y-5">
       <header className="flex items-end justify-between pt-2">
-        <h1 className="text-2xl font-semibold">Salud</h1>
-        <Button onClick={() => setGoals(true)}>Objetivos</Button>
+        <h1 className="text-2xl font-semibold">{t('Salud')}</h1>
+        <Button onClick={() => setGoals(true)}>{t('Objetivos')}</Button>
       </header>
 
       <Card>
         <SectionTitle right={<span className="text-sm font-semibold">{formatKcal(eaten)}{target ? ` / ${formatKcal(target)}` : ''} kcal</span>}>
-          Calorías de hoy
+          {t('Calorías de hoy')}
         </SectionTitle>
         {target ? <ProgressBar value={eaten / target} color={eaten > target ? 'bg-mood' : 'bg-progress'} /> : null}
         {remainingLine(eaten, target) && <p className="mt-2 text-sm">{remainingLine(eaten, target)}</p>}
@@ -114,28 +117,40 @@ export function HealthScreen() {
       </Card>
 
       <Card>
-        <SectionTitle>Peso</SectionTitle>
+        <SectionTitle>{t('Peso')}</SectionTitle>
         <WeightForm key={todayWeight?.kg ?? 'none'} today={today} current={todayWeight?.kg} />
         {!ws.latest ? (
-          <Empty>Cargá tu primer pesaje. Conviene pesarse a la misma hora, por ejemplo al levantarte.</Empty>
+          <Empty>{t('Cargá tu primer pesaje. Conviene pesarse a la misma hora, por ejemplo al levantarte.')}</Empty>
         ) : (
           <>
             <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
-              <Stat label="Tendencia (7 días)" value={ws.trend !== null ? `${formatKg(ws.trend)} kg` : '—'} sub={`Último: ${formatKg(ws.latest.kg)} kg (${formatAR(ws.latest.date, false)})`} />
               <Stat
-                label="Ritmo"
-                value={ws.ratePerWeek === null ? 'Faltan datos' : `${ws.ratePerWeek > 0 ? '+' : ''}${formatKg(ws.ratePerWeek)} kg/sem`}
-                sub={ws.ratePerWeek === null ? 'Necesito 3 pesajes en una semana o más' : 'Últimas 4 semanas'}
+                label={t('Tendencia (7 días)')}
+                value={ws.trend !== null ? `${formatKg(ws.trend)} kg` : '—'}
+                sub={t('Último: {kg} kg ({date})', { kg: formatKg(ws.latest.kg), date: fmtDate(ws.latest.date, false) })}
               />
               <Stat
-                label="Cambio total"
+                label={t('Ritmo')}
+                value={ws.ratePerWeek === null ? t('Faltan datos') : t('{n} kg/sem', { n: `${ws.ratePerWeek > 0 ? '+' : ''}${formatKg(ws.ratePerWeek)}` })}
+                sub={ws.ratePerWeek === null ? t('Necesito 3 pesajes en una semana o más') : t('Últimas 4 semanas')}
+              />
+              <Stat
+                label={t('Cambio total')}
                 value={ws.totalChange !== null ? `${ws.totalChange > 0 ? '+' : ''}${formatKg(ws.totalChange)} kg` : '—'}
-                sub={ws.first ? `Desde ${formatAR(ws.first.date)}` : undefined}
+                sub={ws.first ? t('Desde {date}', { date: fmtDate(ws.first.date) }) : undefined}
               />
               <Stat
-                label="Meta"
-                value={ws.goal === null ? 'Sin meta' : ws.reached ? '🎉 Llegaste' : `${formatKg(Math.abs(ws.toGoal ?? 0))} kg`}
-                sub={ws.goal === null ? 'Ponela en Objetivos' : ws.reached ? `${formatKg(ws.goal)} kg` : ws.eta ? `Al ritmo actual: ${formatAR(ws.eta)}` : `Meta ${formatKg(ws.goal)} kg`}
+                label={t('Meta')}
+                value={ws.goal === null ? t('Sin meta') : ws.reached ? t('🎉 Llegaste') : `${formatKg(Math.abs(ws.toGoal ?? 0))} kg`}
+                sub={
+                  ws.goal === null
+                    ? t('Ponela en Objetivos')
+                    : ws.reached
+                      ? `${formatKg(ws.goal)} kg`
+                      : ws.eta
+                        ? t('Al ritmo actual: {date}', { date: fmtDate(ws.eta) })
+                        : t('Meta {n} kg', { n: formatKg(ws.goal) })
+                }
               />
             </dl>
             {series.length >= 2 && (
@@ -150,21 +165,25 @@ export function HealthScreen() {
       <MyFoodsCard />
 
       <Card>
-        <SectionTitle>Calorías · últimos 30 días</SectionTitle>
+        <SectionTitle>{t('Calorías · últimos 30 días')}</SectionTitle>
         {cal.loggedDays === 0 ? (
-          <Empty>Todavía no hay comidas cargadas.</Empty>
+          <Empty>{t('Todavía no hay comidas cargadas.')}</Empty>
         ) : (
           <>
             <dl className="mb-3 grid grid-cols-2 gap-3 text-sm">
-              <Stat label="Promedio diario" value={`${formatKcal(cal.average ?? 0)} kcal`} sub={`${cal.loggedDays} ${cal.loggedDays === 1 ? 'día' : 'días'} con registro`} />
-              <Stat label="Dentro del objetivo" value={target ? `${cal.daysOnTarget}/${cal.loggedDays} días` : '—'} sub={target ? `≤ ${formatKcal(target)} kcal` : 'Sin objetivo'} />
+              <Stat label={t('Promedio diario')} value={`${formatKcal(cal.average ?? 0)} kcal`} sub={tn(cal.loggedDays, '1 día con registro', '{n} días con registro')} />
+              <Stat
+                label={t('Dentro del objetivo')}
+                value={target ? t('{a}/{b} días', { a: cal.daysOnTarget, b: cal.loggedDays }) : '—'}
+                sub={target ? `≤ ${formatKcal(target)} kcal` : t('Sin objetivo')}
+              />
             </dl>
-            <CalorieBars data={cal.days.map((d) => ({ label: formatAR(d.date, false), kcal: d.kcal }))} target={target} />
+            <CalorieBars data={cal.days.map((d) => ({ label: fmtDate(d.date, false), kcal: d.kcal }))} target={target} />
           </>
         )}
       </Card>
 
-      <Sheet open={goals} onClose={() => setGoals(false)} title="Objetivos">
+      <Sheet open={goals} onClose={() => setGoals(false)} title={t('Objetivos')}>
         {goals && <GoalsForm onDone={() => setGoals(false)} />}
       </Sheet>
     </div>
@@ -184,18 +203,18 @@ export function HealthTodayCard({ today }: { today: ISODate }) {
       <SectionTitle
         right={
           <Link to="/salud" className="text-sm underline">
-            Ver salud
+            {t('Ver salud')}
           </Link>
         }
       >
-        Salud
+        {t('Salud')}
       </SectionTitle>
       <div className="mb-2 flex justify-between text-sm">
         <span>
           🍽️ {formatKcal(eaten)}
           {target ? ` / ${formatKcal(target)}` : ''} kcal
         </span>
-        <span>⚖️ {todayWeight ? `${formatKg(todayWeight.kg)} kg` : 'Sin pesaje hoy'}</span>
+        <span>⚖️ {todayWeight ? `${formatKg(todayWeight.kg)} kg` : t('Sin pesaje hoy')}</span>
       </div>
       {target ? <ProgressBar value={eaten / target} color={eaten > target ? 'bg-mood' : 'bg-progress'} /> : null}
       <div className="mt-3">

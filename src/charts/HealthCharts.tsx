@@ -4,6 +4,8 @@
  */
 import { Bar, BarChart, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Scatter, Tooltip, XAxis, YAxis } from 'recharts'
 import { useIsDark } from '../ui/theme'
+import { t } from '../ui/i18n'
+import { fmtFixed, fmtThousands } from '../domain/numberFormat'
 
 const COLORS = {
   light: { trend: '#38761D', point: '#A64D79', ink: '#666666', grid: '#EFEFEF', surface: '#ffffff' },
@@ -36,19 +38,19 @@ export function WeightChart({ data, goal, height = 200 }: { data: WeightPoint[];
   const values = data.flatMap((d) => [d.kg, d.trend]).concat(goal ? [goal] : [])
   const min = Math.floor(Math.min(...values) - 0.5)
   const max = Math.ceil(Math.max(...values) + 0.5)
-  const fmt = (v: number) => v.toFixed(1).replace('.', ',')
+  const fmt = (v: number) => fmtFixed(v, 1)
   return (
     <div>
       <div className="mb-1 flex gap-4 text-xs text-ink-soft dark:text-neutral-400" aria-hidden>
         <span className="flex items-center gap-1">
-          <span className="inline-block size-2.5 rounded-full" style={{ background: c.point }} /> Pesaje
+          <span className="inline-block size-2.5 rounded-full" style={{ background: c.point }} /> {t('Pesaje')}
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block h-0.5 w-4 rounded" style={{ background: c.trend }} /> Tendencia (7 días)
+          <span className="inline-block h-0.5 w-4 rounded" style={{ background: c.trend }} /> {t('Tendencia (7 días)')}
         </span>
         {goal ? (
           <span className="flex items-center gap-1">
-            <span className="inline-block w-4 border-t-2 border-dashed" style={{ borderColor: c.ink }} /> Meta
+            <span className="inline-block w-4 border-t-2 border-dashed" style={{ borderColor: c.ink }} /> {t('Meta')}
           </span>
         ) : null}
       </div>
@@ -61,7 +63,7 @@ export function WeightChart({ data, goal, height = 200 }: { data: WeightPoint[];
             {goal ? <ReferenceLine y={goal} stroke={c.ink} strokeDasharray="4 4" /> : null}
             <Tooltip
               cursor={{ stroke: c.ink, strokeDasharray: '3 3' }}
-              formatter={(v, name) => [`${typeof v === 'number' ? fmt(v) : '—'} kg`, name === 'trend' ? 'Tendencia' : 'Pesaje']}
+              formatter={(v, name) => [`${typeof v === 'number' ? fmt(v) : '—'} kg`, name === 'trend' ? t('Tendencia') : t('Pesaje')]}
               {...tooltipStyle(dark)}
             />
             <Scatter dataKey="kg" fill={c.point} stroke={c.surface} strokeWidth={2} isAnimationActive={false} />
@@ -82,12 +84,12 @@ export interface CaloriePoint {
 export function CalorieBars({ data, target, height = 180 }: { data: CaloriePoint[]; target?: number; height?: number }) {
   const dark = useIsDark()
   const c = COLORS[dark ? 'dark' : 'light']
-  const fmt = (v: number) => Math.round(v).toLocaleString('es-AR')
+  const fmt = (v: number) => fmtThousands(Math.round(v))
   return (
     <div>
       {target ? (
         <div className="mb-1 flex items-center gap-1 text-xs text-ink-soft dark:text-neutral-400">
-          <span className="inline-block w-4 border-t-2 border-dashed" style={{ borderColor: c.ink }} /> Objetivo: {fmt(target)} kcal
+          <span className="inline-block w-4 border-t-2 border-dashed" style={{ borderColor: c.ink }} /> {t('Objetivo: {n} kcal', { n: fmt(target) })}
         </div>
       ) : null}
     <div style={{ height }} className="w-full">

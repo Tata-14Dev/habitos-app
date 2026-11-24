@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { t } from './i18n'
 
 export function cx(...c: (string | false | null | undefined)[]) {
   return c.filter(Boolean).join(' ')
@@ -73,14 +74,14 @@ export function PendingNotice({ fns }: { fns: string[] }) {
   if (!fns.length) return null
   return (
     <div className="rounded-xl border border-dashed border-amber-400 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-600 dark:bg-amber-950/40 dark:text-amber-200">
-      🛠️ Pendiente: implementá{' '}
+      {t('🛠️ Pendiente: implementá')}{' '}
       {fns.map((f, i) => (
         <span key={f}>
           <code className="font-mono font-semibold">{f}</code>
           {i < fns.length - 1 ? ', ' : ''}
         </span>
       ))}{' '}
-      (ver <code className="font-mono">docs/GUIA_REPROGRAMACION.md</code>)
+      ({t('ver')} <code className="font-mono">docs/GUIA_REPROGRAMACION.md</code>)
     </div>
   )
 }
@@ -99,7 +100,7 @@ export const inputCls =
   'w-full min-h-11 rounded-xl border border-line bg-white px-3 py-2 text-base text-ink outline-none focus:border-progress dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100'
 
 /** Collapsible group for secondary fields ("Más opciones"). Native <details>: accessible, no state. */
-export function MoreOptions({ children, summary = 'Más opciones', hint }: { children: ReactNode; summary?: string; hint?: string }) {
+export function MoreOptions({ children, summary = t('Más opciones'), hint }: { children: ReactNode; summary?: string; hint?: string }) {
   return (
     <details className="group rounded-xl bg-paper px-3 dark:bg-neutral-900">
       <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
@@ -135,7 +136,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
       <div className="max-h-[85dvh] overflow-y-auto p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-lg font-semibold">{title}</h3>
-          <Button variant="ghost" onClick={onClose} aria-label="Cerrar">
+          <Button variant="ghost" onClick={onClose} aria-label={t('Cerrar')}>
             ✕
           </Button>
         </div>

@@ -6,8 +6,10 @@ import { formatAmount } from '../../domain/progress'
 import { setHabitAmount, setHabitDone } from '../../data/repo'
 import { AreaTrend } from '../../charts/AreaTrend'
 import { Card, cx, Empty, ProgressBar, SectionTitle } from '../components'
-import { monthLabel, WEEKDAY_SHORT } from '../format'
+import { WEEKDAY_SHORT, fmtDate, monthLabel } from '../format'
 import { useDayMoods, useHabitLogs, useHabits, useSettings, useToday, useLinkedHabitDays } from '../hooks'
+import { fmtDecimal, fmtFixed } from '../../domain/numberFormat'
+import { t } from '../i18n'
 
 export function MonthScreen() {
   const today = useToday()
@@ -43,32 +45,32 @@ export function MonthScreen() {
   return (
     <div className="space-y-5">
       <header className="flex items-center justify-between pt-2">
-        <Link to={`/habitos/mes/${prev[0]}/${prev[1]}`} className="grid size-11 place-items-center rounded-xl bg-white text-xl dark:bg-neutral-800" aria-label="Mes anterior">
+        <Link to={`/habitos/mes/${prev[0]}/${prev[1]}`} className="grid size-11 place-items-center rounded-xl bg-white text-xl dark:bg-neutral-800" aria-label={t('Mes anterior')}>
           ‹
         </Link>
         <div className="text-center">
           <h1 className="text-xl font-semibold capitalize">{monthLabel(year, month)}</h1>
           <p className="text-sm text-ink-soft dark:text-neutral-400">
-            Mes: {formatPct(stats.total)} ·{' '}
+            {t('Mes: {pct}', { pct: formatPct(stats.total) })} ·{' '}
             <Link to={`/habitos/anio/${year}`} className="underline">
-              ver {year}
+              {t('ver {year}', { year })}
             </Link>
           </p>
         </div>
-        <Link to={`/habitos/mes/${next[0]}/${next[1]}`} className="grid size-11 place-items-center rounded-xl bg-white text-xl dark:bg-neutral-800" aria-label="Mes siguiente">
+        <Link to={`/habitos/mes/${next[0]}/${next[1]}`} className="grid size-11 place-items-center rounded-xl bg-white text-xl dark:bg-neutral-800" aria-label={t('Mes siguiente')}>
           ›
         </Link>
       </header>
 
       <Card className="p-0">
         {monthHabits.length === 0 ? (
-          <Empty>Ningún hábito vigente este mes.</Empty>
+          <Empty>{t('Ningún hábito vigente este mes.')}</Empty>
         ) : (
           <div ref={scrollRef} className="overflow-x-auto">
             <table className="border-separate border-spacing-0 text-xs">
               <thead>
                 <tr>
-                  <th className="sticky left-0 z-10 bg-white p-2 text-left dark:bg-neutral-800">Hábito</th>
+                  <th className="sticky left-0 z-10 bg-white p-2 text-left dark:bg-neutral-800">{t('Hábito')}</th>
                   {stats.days.map((d) => (
                     <th
                       key={d.date}
@@ -105,7 +107,7 @@ export function MonthScreen() {
                               aria-label={`${h.name} ${d.date}`}
                               disabled={d.future}
                               onClick={() => {
-                                const v = prompt(`${h.name} · ${d.date}: ¿cuánto hiciste?`, amount ? String(amount).replace('.', ',') : '')
+                                const v = prompt(t('{name} · {date}: ¿cuánto hiciste?', { name: h.name, date: fmtDate(d.date, false) }), amount ? fmtDecimal(amount) : '')
                                 if (v !== null && Number(v.replace(',', '.')) >= 0) void setHabitAmount(h.id, d.date, Number(v.replace(',', '.')))
                               }}
                               className={cx(
@@ -136,7 +138,7 @@ export function MonthScreen() {
                   </tr>
                 ))}
                 <tr>
-                  <th className="sticky left-0 z-10 bg-white p-2 text-left font-semibold dark:bg-neutral-800">% día</th>
+                  <th className="sticky left-0 z-10 bg-white p-2 text-left font-semibold dark:bg-neutral-800">{t('% día')}</th>
                   {stats.days.map((d) => (
                     <td key={d.date} className="p-1 text-center text-[10px] text-ink-soft">
                       {d.future ? '' : formatPct(d.ratio).replace('%', '')}
@@ -150,7 +152,7 @@ export function MonthScreen() {
       </Card>
 
       <Card>
-        <SectionTitle>Por hábito</SectionTitle>
+        <SectionTitle>{t('Por hábito')}</SectionTitle>
         <ul className="space-y-3">
           {monthHabits.map((h) => (
             <li key={h.id}>
@@ -167,7 +169,7 @@ export function MonthScreen() {
       </Card>
 
       <Card>
-        <SectionTitle>Progreso diario</SectionTitle>
+        <SectionTitle>{t('Progreso diario')}</SectionTitle>
         <AreaTrend
           kind="progress"
           max={1}
@@ -177,11 +179,11 @@ export function MonthScreen() {
       </Card>
 
       <Card>
-        <SectionTitle>Estado mental</SectionTitle>
+        <SectionTitle>{t('Estado mental')}</SectionTitle>
         <AreaTrend
           kind="mood"
           max={10}
-          format={(v) => v.toFixed(1).replace('.', ',')}
+          format={(v) => fmtFixed(v, 1)}
           data={stats.days.map((d) => ({ label: String(Number(d.date.slice(8))), value: mentalState(moodByDate.get(d.date)) }))}
         />
       </Card>

@@ -6,12 +6,13 @@
 import { useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { AreaTrend } from '../../charts/AreaTrend'
-import { formatAR, weekday, yearMonth, type ISODate } from '../../domain/dates'
+import { weekday, yearMonth, type ISODate } from '../../domain/dates'
 import { buildDoneLookup, formatPct, monthStats, rangeRatio, type MonthStats } from '../../domain/habits'
 import { Card, cx, SectionTitle } from '../components'
-import { monthLabel } from '../format'
+import { fmtDate, monthLabel } from '../format'
 import { useHabitLogs, useHabits, useLinkedHabitDays, useSettings, useToday } from '../hooks'
 import { useIsDark } from '../theme'
+import { t } from '../i18n'
 
 const RAMP = {
   light: ['#88C16E', '#6FAE53', '#558F3B', '#3D7027', '#285217'],
@@ -43,8 +44,8 @@ function MiniMonth({ stats, mondayFirst, ramp, today }: { stats: MonthStats; mon
           return (
             <span
               key={d.date}
-              title={`${formatAR(d.date, false)}: ${d.future ? 'todavía no' : formatPct(d.ratio)}`}
-              aria-label={`${formatAR(d.date, false)}: ${d.future ? 'todavía no' : formatPct(d.ratio)}`}
+              title={`${fmtDate(d.date, false)}: ${d.future ? t('todavía no') : formatPct(d.ratio)}`}
+              aria-label={`${fmtDate(d.date, false)}: ${d.future ? t('todavía no') : formatPct(d.ratio)}`}
               className={cx(
                 'aspect-square rounded-[3px]',
                 !color && (d.future || pct === null ? 'bg-transparent ring-1 ring-inset ring-line dark:ring-neutral-700' : 'bg-line dark:bg-neutral-700'),
@@ -82,26 +83,26 @@ export function YearScreen() {
   return (
     <div className="space-y-5">
       <header className="flex items-center justify-between pt-2">
-        <Link to={`/habitos/anio/${year - 1}`} className="grid size-11 place-items-center rounded-xl bg-white text-xl dark:bg-neutral-800" aria-label="Año anterior">
+        <Link to={`/habitos/anio/${year - 1}`} className="grid size-11 place-items-center rounded-xl bg-white text-xl dark:bg-neutral-800" aria-label={t('Año anterior')}>
           ‹
         </Link>
         <div className="text-center">
           <h1 className="text-xl font-semibold">{year}</h1>
-          <p className="text-sm text-ink-soft dark:text-neutral-400">Año: {formatPct(total)}</p>
+          <p className="text-sm text-ink-soft dark:text-neutral-400">{t('Año: {pct}', { pct: formatPct(total) })}</p>
         </div>
-        <Link to={`/habitos/anio/${year + 1}`} className="grid size-11 place-items-center rounded-xl bg-white text-xl dark:bg-neutral-800" aria-label="Año siguiente">
+        <Link to={`/habitos/anio/${year + 1}`} className="grid size-11 place-items-center rounded-xl bg-white text-xl dark:bg-neutral-800" aria-label={t('Año siguiente')}>
           ›
         </Link>
       </header>
 
       <Card>
-        <SectionTitle>Por mes</SectionTitle>
+        <SectionTitle>{t('Por mes')}</SectionTitle>
         <AreaTrend data={trend} kind="progress" max={1} format={(v) => `${Math.round(v * 100)}%`} />
       </Card>
 
       <Card>
-        <SectionTitle>Día por día</SectionTitle>
-        <div className="mb-3 flex items-center gap-1 text-[11px] text-ink-soft dark:text-neutral-400" aria-label="Referencia de colores">
+        <SectionTitle>{t('Día por día')}</SectionTitle>
+        <div className="mb-3 flex items-center gap-1 text-[11px] text-ink-soft dark:text-neutral-400" aria-label={t('Referencia de colores')}>
           <span className="mr-1">0%</span>
           <span className="size-3 rounded-[3px] bg-line dark:bg-neutral-700" />
           {ramp.map((c, i) => (

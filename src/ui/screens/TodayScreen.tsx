@@ -2,18 +2,19 @@ import { lazy, Suspense, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { addDays, weekStart } from '../../domain/dates'
 import { buildDoneLookup, dayRatio, formatPct, isHabitScheduled, isWeeklyGoal, mentalState } from '../../domain/habits'
-import { marginLabel } from '../../domain/plans'
 import { formatTask, parseDictation, sortTasks } from '../../domain/tasks'
 import { addTasksFromText, deleteTask, setItemDone, setMood, updateTask } from '../../data/repo'
 import type { Plan, PlanItem } from '../../data/types'
 import { Button, Card, Check, cx, Empty, inputCls, PendingNotice, ProgressBar, Scale, SectionTitle } from '../components'
-import { longDay } from '../format'
+import { longDay, marginText } from '../format'
 import { useDayMoods, useHabitLogs, useHabits, usePlanItems, usePlans, useSettings, useTasks, useToday, useLinkedHabitDays } from '../hooks'
+import { t, tn } from '../i18n'
 import { usePlanModel } from '../usePlanModel'
 import { AmountToday } from './AmountPlan'
 import { TodayHabitList, WeeklyGoalList } from './HabitWidgets'
 import { CurrentLine } from './CurrentLine'
 import { DEMO, enterDemo } from '../../data/demoFlag'
+import { fmtFixed } from '../../domain/numberFormat'
 
 // Only loaded when health tracking is on (it pulls the food dictionary and charts).
 const HealthTodayCard = lazy(() => import('./HealthScreen').then((m) => ({ default: m.HealthTodayCard })))
@@ -35,26 +36,24 @@ export function TodayScreen() {
   const hasWeekly = (habits ?? []).some((h) => isWeeklyGoal(h) && h.startDate <= today && (!h.endDate || today <= h.endDate))
   const ratio = dayRatio(habits ?? [], today, isDone)
   const sortedTasks = sortTasks(tasks ?? [])
-  const pendingTasks = sortedTasks.filter((t) => !t.done).length
+  const pendingTasks = sortedTasks.filter((task) => !task.done).length
 
   return (
     <div className="space-y-5">
       <header className="pt-2">
         <p className="text-sm text-ink-soft first-letter:uppercase dark:text-neutral-400">{longDay(today)}</p>
-        <h1 className="text-2xl font-semibold">Tu día</h1>
-        <p className="mt-1 text-ink-soft dark:text-neutral-400">
-          {briefingLine(pendingTasks, dueToday.length - ratio.done)}
-        </p>
+        <h1 className="text-2xl font-semibold">{t('Tu día')}</h1>
+        <p className="mt-1 text-ink-soft dark:text-neutral-400">{briefingLine(pendingTasks, dueToday.length - ratio.done)}</p>
       </header>
 
       {!DEMO && habits?.length === 0 && plans?.length === 0 && (
         <Card className="border-2 border-dashed border-progress/60">
-          <p className="font-medium">¿Primera vez?</p>
+          <p className="font-medium">{t('¿Primera vez?')}</p>
           <p className="mt-1 text-sm text-ink-soft dark:text-neutral-400">
-            Mirá la app con seis semanas de datos de ejemplo: hábitos, un curso a mitad de camino, gráficos y salud. No toca tus datos.
+            {t('Mirá la app con seis semanas de datos de ejemplo: hábitos, un curso a mitad de camino, gráficos y salud. No toca tus datos.')}
           </p>
           <Button variant="primary" className="mt-3 w-full" onClick={enterDemo}>
-            🧪 Probar la demo
+            {t('🧪 Probar la demo')}
           </Button>
         </Card>
       )}
@@ -62,19 +61,19 @@ export function TodayScreen() {
       <DictationCard today={today} />
 
       <Card>
-        <SectionTitle>Tareas</SectionTitle>
+        <SectionTitle>{t('Tareas')}</SectionTitle>
         {sortedTasks.length === 0 ? (
-          <Empty>Sin tareas. Dictá lo que tenés que hacer arriba.</Empty>
+          <Empty>{t('Sin tareas. Dictá lo que tenés que hacer arriba.')}</Empty>
         ) : (
           <ul className="divide-y divide-line dark:divide-neutral-700">
-            {sortedTasks.map((t) => (
-              <li key={t.id} className="flex items-center gap-3 py-2.5">
-                <Check checked={t.done} label={t.title} onChange={(v) => void updateTask(t.id, { done: v })} />
-                <span className={cx('flex-1 text-base', t.done && 'text-ink-soft line-through')}>
-                  {t.time && <span className="mr-2 font-mono font-semibold">{t.time}</span>}
-                  {t.title}
+            {sortedTasks.map((task) => (
+              <li key={task.id} className="flex items-center gap-3 py-2.5">
+                <Check checked={task.done} label={task.title} onChange={(v) => void updateTask(task.id, { done: v })} />
+                <span className={cx('flex-1 text-base', task.done && 'text-ink-soft line-through')}>
+                  {task.time && <span className="mr-2 font-mono font-semibold">{task.time}</span>}
+                  {task.title}
                 </span>
-                <button className="px-2 text-ink-soft" aria-label={`Borrar ${t.title}`} onClick={() => void deleteTask(t.id)}>
+                <button className="px-2 text-ink-soft" aria-label={t('Borrar {name}', { name: task.title })} onClick={() => void deleteTask(task.id)}>
                   ✕
                 </button>
               </li>
@@ -84,11 +83,14 @@ export function TodayScreen() {
       </Card>
 
       <Card>
-        <SectionTitle right={<span className="text-sm font-semibold">{formatPct(ratio)}</span>}>Hábitos</SectionTitle>
+        <SectionTitle right={<span className="text-sm font-semibold">{formatPct(ratio)}</span>}>{t('Hábitos')}</SectionTitle>
         <ProgressBar value={ratio.pct} />
         {dueToday.length === 0 ? (
           <Empty>
-            Hoy no te toca ningún hábito. <Link to="/habitos" className="underline">Agregá uno</Link>.
+            {t('Hoy no te toca ningún hábito.')}{' '}
+            <Link to="/habitos" className="underline">
+              {t('Agregá uno')}
+            </Link>
           </Empty>
         ) : (
           <TodayHabitList habits={habits ?? []} logs={logs ?? []} isDone={isDone} today={today} plans={plans ?? []} />
@@ -97,7 +99,7 @@ export function TodayScreen() {
 
       {hasWeekly && (
         <Card>
-          <SectionTitle>Metas de la semana</SectionTitle>
+          <SectionTitle>{t('Metas de la semana')}</SectionTitle>
           <WeeklyGoalList habits={habits ?? []} logs={logs ?? []} today={today} mondayFirst={weekStartsMonday} />
         </Card>
       )}
@@ -113,12 +115,12 @@ export function TodayScreen() {
       )}
 
       <Card>
-        <SectionTitle right={<span className="text-sm text-ink-soft">Estado mental: {fmtMental(mentalState(mood))}</span>}>
-          Ánimo y motivación
+        <SectionTitle right={<span className="text-sm text-ink-soft">{t('Estado mental: {v}', { v: fmtMental(mentalState(mood)) })}</span>}>
+          {t('Ánimo y motivación')}
         </SectionTitle>
-        <p className="mb-1 text-sm">Ánimo</p>
+        <p className="mb-1 text-sm">{t('Ánimo')}</p>
         <Scale value={mood?.mood} color="bg-mood" onChange={(v) => void setMood(today, { mood: v })} />
-        <p className="mb-1 mt-3 text-sm">Motivación</p>
+        <p className="mb-1 mt-3 text-sm">{t('Motivación')}</p>
         <Scale value={mood?.motivation} color="bg-progress" onChange={(v) => void setMood(today, { motivation: v })} />
       </Card>
     </div>
@@ -127,13 +129,14 @@ export function TodayScreen() {
 
 function briefingLine(tasks: number, habits: number): string {
   const parts: string[] = []
-  if (tasks) parts.push(`${tasks} ${tasks === 1 ? 'tarea' : 'tareas'}`)
-  if (habits > 0) parts.push(`${habits} ${habits === 1 ? 'hábito' : 'hábitos'}`)
-  return parts.length ? `Te quedan ${parts.join(' y ')}.` : 'Nada pendiente por ahora. 🎉'
+  if (tasks) parts.push(tn(tasks, '1 tarea', '{n} tareas'))
+  if (habits > 0) parts.push(tn(habits, '1 hábito', '{n} hábitos'))
+  if (!parts.length) return t('Nada pendiente por ahora. 🎉')
+  return parts.length === 2 ? t('Te quedan {a} y {b}.', { a: parts[0], b: parts[1] }) : t('Te quedan {a}.', { a: parts[0] })
 }
 
 function fmtMental(v: number | null) {
-  return v === null ? '—' : v.toFixed(1).replace('.', ',')
+  return v === null ? '—' : fmtFixed(v, 1)
 }
 
 function DictationCard({ today }: { today: string }) {
@@ -146,12 +149,12 @@ function DictationCard({ today }: { today: string }) {
   }
   return (
     <Card>
-      <SectionTitle>🎤 Dictá tu día</SectionTitle>
+      <SectionTitle>{t('🎤 Dictá tu día')}</SectionTitle>
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={3}
-        placeholder="Tocá el micrófono del teclado y decí, por ejemplo: «dentista a las 15, comprar yerba, llamar a Juan»"
+        placeholder={t('Tocá el micrófono del teclado y decí, por ejemplo: «dentista a las 15, comprar yerba, llamar a Juan»')}
         className={cx(inputCls, 'resize-none')}
       />
       {preview.length > 0 && (
@@ -162,7 +165,7 @@ function DictationCard({ today }: { today: string }) {
         </ul>
       )}
       <Button variant="primary" className="mt-3 w-full" disabled={!preview.length} onClick={() => void add()}>
-        Agregar {preview.length > 0 ? `${preview.length} ${preview.length === 1 ? 'tarea' : 'tareas'}` : ''}
+        {preview.length > 0 ? tn(preview.length, 'Agregar 1 tarea', 'Agregar {n} tareas') : t('Agregar')}
       </Button>
     </Card>
   )
@@ -182,18 +185,16 @@ function PlanToday({ plan, today }: { plan: Plan; today: string }) {
       <SectionTitle
         right={
           <Link to={`/planes/${plan.id}`} className="text-sm underline">
-            Ver plan
+            {t('Ver plan')}
           </Link>
         }
       >
         {plan.name}
       </SectionTitle>
       <div className="mb-2 flex items-center justify-between text-sm">
-        <span>
-          {model.doneCount}/{model.total} hechos
-        </span>
+        <span>{t('{done}/{total} hechos', { done: model.doneCount, total: model.total })}</span>
         {model.metrics.ok && model.metrics.value.marginDays !== null && (
-          <span className="font-medium">{marginLabel(model.metrics.value.marginDays)}</span>
+          <span className="font-medium">{marginText(model.metrics.value.marginDays)}</span>
         )}
       </div>
       <ProgressBar value={model.total ? model.doneCount / model.total : null} />
@@ -201,7 +202,7 @@ function PlanToday({ plan, today }: { plan: Plan; today: string }) {
       <PendingNotice fns={model.pending} />
       {model.metrics.ok && (
         <ul className="mt-2 divide-y divide-line dark:divide-neutral-700">
-          {shown.length === 0 && <Empty>Hoy no te toca nada de este plan.</Empty>}
+          {shown.length === 0 && <Empty>{t('Hoy no te toca nada de este plan.')}</Empty>}
           {shown.map((it) => (
             <li key={it.id} className="flex items-center gap-3 py-2.5">
               <Check checked={it.done} label={it.title} onChange={(v) => void setItemDone(it.id, v, today)} />
@@ -215,7 +216,10 @@ function PlanToday({ plan, today }: { plan: Plan; today: string }) {
       )}
       {!model.metrics.ok && (
         <p className="mt-2 text-sm text-ink-soft">
-          Mientras tanto podés marcar ítems desde el <Link to={`/planes/${plan.id}`} className="underline">detalle del plan</Link>.
+          {t('Mientras tanto podés marcar ítems desde el detalle del plan.')}{' '}
+          <Link to={`/planes/${plan.id}`} className="underline">
+            {t('Ver plan')}
+          </Link>
         </p>
       )}
     </Card>

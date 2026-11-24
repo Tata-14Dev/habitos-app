@@ -4,6 +4,7 @@ import { cx } from './components'
 import { DEMO, exitDemo } from '../data/demoFlag'
 import { useSettings, useSyncState } from './hooks'
 import { TodayScreen } from './screens/TodayScreen'
+import { t } from './i18n'
 
 // "Hoy" ships in the main bundle; every other screen (and Recharts, the food dictionary…) is
 // loaded on first visit. The service worker precaches all chunks, so offline still works.
@@ -18,13 +19,13 @@ const HealthScreen = named(() => import('./screens/HealthScreen'), 'HealthScreen
 const SettingsScreen = named(() => import('./screens/SettingsScreen'), 'SettingsScreen')
 
 const TABS = [
-  { to: '/', label: 'Hoy', icon: '☀️', end: true },
-  { to: '/habitos', label: 'Hábitos', icon: '✅', end: false },
-  { to: '/planes', label: 'Planes', icon: '📚', end: false },
-  { to: '/ajustes', label: 'Ajustes', icon: '⚙️', end: false },
+  { to: '/', label: t('Hoy'), icon: '☀️', end: true },
+  { to: '/habitos', label: t('Hábitos'), icon: '✅', end: false },
+  { to: '/planes', label: t('Planes'), icon: '📚', end: false },
+  { to: '/ajustes', label: t('Ajustes'), icon: '⚙️', end: false },
 ]
 
-const HEALTH_TAB = { to: '/salud', label: 'Salud', icon: '🍎', end: false }
+const HEALTH_TAB = { to: '/salud', label: t('Salud'), icon: '🍎', end: false }
 
 export default function App() {
   const { healthEnabled } = useSettings()
@@ -34,7 +35,7 @@ export default function App() {
       <div className="mx-auto min-h-dvh max-w-xl px-4 pb-28 pt-[max(0.5rem,env(safe-area-inset-top))]">
         {DEMO && <DemoBanner />}
         <SyncBadge />
-        <Suspense fallback={<p className="py-16 text-center text-ink-soft">Cargando…</p>}>
+        <Suspense fallback={<p className="py-16 text-center text-ink-soft">{t('Cargando…')}</p>}>
         <Routes>
           <Route path="/" element={<TodayScreen />} />
           <Route path="/habitos" element={<HabitsScreen />} />
@@ -77,9 +78,9 @@ export default function App() {
 function DemoBanner() {
   return (
     <div className="sticky top-0 z-30 -mx-4 mb-2 flex items-center justify-between gap-2 bg-amber-100 px-4 py-2 text-sm text-amber-950 dark:bg-amber-900 dark:text-amber-50">
-      <span>🧪 Modo demo: datos de ejemplo, no se guardan en ninguna cuenta.</span>
+      <span>{t('🧪 Modo demo: datos de ejemplo, no se guardan en ninguna cuenta.')}</span>
       <button className="shrink-0 rounded-lg bg-white/70 px-3 py-1 font-medium dark:bg-black/30" onClick={exitDemo}>
-        Salir
+        {t('Salir')}
       </button>
     </div>
   )

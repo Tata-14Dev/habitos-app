@@ -11,13 +11,14 @@ import { addFood, deleteCustomFood, deleteFood, saveCustomFood } from '../../dat
 import type { CustomFood, FoodEntry, FoodItem, Meal } from '../../data/types'
 import { Button, Card, cx, Empty, Field, inputCls, SectionTitle, Sheet } from '../components'
 import { useCustomFoods } from '../hooks'
+import { t, tn } from '../i18n'
 
 const MEALS: { value: Meal; label: string; icon: string }[] = [
-  { value: 'desayuno', label: 'Desayuno', icon: '☕' },
-  { value: 'almuerzo', label: 'Almuerzo', icon: '🍽️' },
-  { value: 'merienda', label: 'Merienda', icon: '🧉' },
-  { value: 'cena', label: 'Cena', icon: '🌙' },
-  { value: 'snack', label: 'Snack', icon: '🍎' },
+  { value: 'desayuno', label: t('Desayuno'), icon: '☕' },
+  { value: 'almuerzo', label: t('Almuerzo'), icon: '🍽️' },
+  { value: 'merienda', label: t('Merienda'), icon: '🧉' },
+  { value: 'cena', label: t('Cena'), icon: '🌙' },
+  { value: 'snack', label: t('Snack'), icon: '🍎' },
 ]
 
 /** Meal that fits the current hour (only a default; the user can change it). */
@@ -62,24 +63,19 @@ function MealPicker({ meal, onChange }: { meal: Meal; onChange: (m: Meal) => voi
 function FormatHelp() {
   return (
     <details className={cx(hintCls, 'mt-1')}>
-      <summary className="cursor-pointer underline">¿Cómo lo escribo?</summary>
+      <summary className="cursor-pointer underline">{t('¿Cómo lo escribo?')}</summary>
       <div className="mt-2 space-y-1">
+        <p>{t('Cada alimento es cantidad + unidad + alimento. Separalos con coma, con «y» o uno por línea. Funciona con el dictado del teclado.')}</p>
         <p>
-          Cada alimento es <b>cantidad + unidad + alimento</b>. Separalos con coma, con «y» o uno por línea. Funciona con el dictado
-          del teclado.
+          <b>{t('Cantidad:')}</b> {t('2 · 1,5 · 1/2 · un, una, medio, media, dos… diez. Si no ponés cantidad, cuenta 1.')}
         </p>
         <p>
-          <b>Cantidad:</b> 2 · 1,5 · 1/2 · un, una, medio, media, dos… diez. Si no ponés cantidad, cuenta 1.
+          <b>{t('Unidades:')}</b> {t('g, kg, ml, cc, l · taza, vaso, cda (cucharada), cdta (cucharadita), feta, rebanada, porción, plato. Sin unidad cuenta unidades: «2 huevos».')}
         </p>
         <p>
-          <b>Unidades:</b> g, kg, ml, cc, l · taza, vaso, cda (cucharada), cdta (cucharadita), feta, rebanada, porción, plato. Sin unidad
-          cuenta unidades: «2 huevos».
+          <b>{t('Ejemplos:')}</b> 200 g arroz · 2 huevos · 1 taza de leche · 1/2 palta · 3 fetas de jamón · 1 milanesa · 150 ml jugo de naranja · 1 cda de aceite.
         </p>
-        <p>
-          <b>Ejemplos:</b> 200 g arroz · 2 huevos · 1 taza de leche · 1/2 palta · 3 fetas de jamón · 1 milanesa · 150 ml jugo de naranja ·
-          1 cda de aceite.
-        </p>
-        <p>Valores aproximados: arroz, fideos y legumbres cuentan cocidos salvo que digas «crudo».</p>
+        <p>{t('Valores aproximados: arroz, fideos y legumbres cuentan cocidos salvo que digas «crudo».')}</p>
       </div>
     </details>
   )
@@ -105,9 +101,9 @@ function LineRow({
         <span className="min-w-0 flex-1">
           <span className="block truncate">{line.raw}</span>
           <span className={cx(hintCls, 'block')}>
-            {guess && 'Parecido a: '}
+            {guess && t('Parecido a:') + ' '}
             {line.food.name}
-            {line.food.custom && ' (mío)'}
+            {line.food.custom && ' ' + t('(mío)')}
             {amountLabel(line) && ` · ${amountLabel(line)}`}
           </span>
         </span>
@@ -131,11 +127,11 @@ function LineRow({
           value={manual}
           onChange={(e) => onManual(e.target.value)}
           placeholder="kcal"
-          aria-label={`kcal de ${line.raw}`}
+          aria-label={t('kcal de {name}', { name: line.raw })}
         />
         {line.reason !== 'no-food' && line.reason !== 'bad-quantity' && (
           <button type="button" className="text-xs underline" onClick={onTeach}>
-            Guardar en Mis alimentos
+            {t('Guardar en Mis alimentos')}
           </button>
         )}
       </div>
@@ -179,11 +175,11 @@ export function MealForm({ today }: { today: ISODate }) {
 
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-2 gap-1 rounded-xl bg-paper p-1 text-sm dark:bg-neutral-900" role="group" aria-label="Cómo cargar">
+      <div className="grid grid-cols-2 gap-1 rounded-xl bg-paper p-1 text-sm dark:bg-neutral-900" role="group" aria-label={t('Cómo cargar')}>
         {(
           [
-            ['text', 'Escribir comida'],
-            ['kcal', 'Solo kcal'],
+            ['text', t('Escribir comida')],
+            ['kcal', t('Solo kcal')],
           ] as const
         ).map(([v, l]) => (
           <button
@@ -207,7 +203,7 @@ export function MealForm({ today }: { today: ISODate }) {
           }}
         >
           <label className="block">
-            <span className="mb-1 block text-sm font-medium">¿Qué comiste?</span>
+            <span className="mb-1 block text-sm font-medium">{t('¿Qué comiste?')}</span>
             <textarea
               className={cx(inputCls, 'min-h-20')}
               rows={3}
@@ -216,12 +212,12 @@ export function MealForm({ today }: { today: ISODate }) {
               placeholder={'200 g arroz, 2 huevos\n1 taza de leche'}
             />
           </label>
-          <p className={hintCls}>Cantidad, unidad y alimento; separá con coma, «y» o una línea por alimento.</p>
+          <p className={hintCls}>{t('Cantidad, unidad y alimento; separá con coma, «y» o una línea por alimento.')}</p>
           <FormatHelp />
 
           {analysis.lines.length > 0 && (
             <div className="rounded-xl bg-paper p-3 dark:bg-neutral-900">
-              <ul aria-label="Vista previa" className="divide-y divide-line dark:divide-neutral-700">
+              <ul aria-label={t('Vista previa')} className="divide-y divide-line dark:divide-neutral-700">
                 {analysis.lines.map((l, i) => (
                   <LineRow
                     key={`${i}|${l.raw}`}
@@ -233,12 +229,12 @@ export function MealForm({ today }: { today: ISODate }) {
                 ))}
               </ul>
               <div className="mt-2 flex items-baseline justify-between border-t border-line pt-2 dark:border-neutral-700">
-                <span className={hintCls}>Valores aproximados</span>
-                <span className="font-semibold">Total: {formatKcal(total)} kcal</span>
+                <span className={hintCls}>{t('Valores aproximados')}</span>
+                <span className="font-semibold">{t('Total: {n} kcal', { n: formatKcal(total) })}</span>
               </div>
               {missing > 0 && (
                 <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
-                  {missing === 1 ? 'Falta resolver 1 línea' : `Faltan resolver ${missing} líneas`}: poné sus kcal o guardalas en Mis alimentos.
+                  {tn(missing, 'Falta resolver 1 línea: poné sus kcal o guardala en Mis alimentos.', 'Faltan resolver {n} líneas: poné sus kcal o guardalas en Mis alimentos.')}
                 </p>
               )}
             </div>
@@ -246,7 +242,7 @@ export function MealForm({ today }: { today: ISODate }) {
 
           <MealPicker meal={meal} onChange={setMeal} />
           <Button type="submit" variant="primary" className="w-full" disabled={!textValid}>
-            {analysis.lines.length ? `Sumar ${formatKcal(total)} kcal` : 'Sumar'}
+            {analysis.lines.length ? t('Sumar {n} kcal', { n: formatKcal(total) }) : t('Sumar')}
           </Button>
         </form>
       ) : (
@@ -261,18 +257,18 @@ export function MealForm({ today }: { today: ISODate }) {
             })
           }}
         >
-          <input className={inputCls} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Qué comiste (opcional)" aria-label="Qué comiste" />
+          <input className={inputCls} value={label} onChange={(e) => setLabel(e.target.value)} placeholder={t('Qué comiste (opcional)')} aria-label={t('Qué comiste')} />
           <div className="grid grid-cols-[1fr_auto] gap-2">
-            <input inputMode="numeric" className={inputCls} value={kcal} onChange={(e) => setKcal(e.target.value)} placeholder="kcal" aria-label="Calorías" />
+            <input inputMode="numeric" className={inputCls} value={kcal} onChange={(e) => setKcal(e.target.value)} placeholder="kcal" aria-label={t('Calorías')} />
             <Button type="submit" variant="primary" disabled={!kcalValid}>
-              Sumar kcal
+              {t('Sumar kcal')}
             </Button>
           </div>
           <MealPicker meal={meal} onChange={setMeal} />
         </form>
       )}
 
-      <Sheet open={teach !== null} onClose={() => setTeach(null)} title="Nuevo alimento">
+      <Sheet open={teach !== null} onClose={() => setTeach(null)} title={t('Nuevo alimento')}>
         {teach !== null && <CustomFoodForm initialName={suggestName(teach)} onDone={() => setTeach(null)} />}
       </Sheet>
     </div>
@@ -308,14 +304,14 @@ export function CustomFoodForm({ food, initialName = '', onDone }: { food?: Cust
         }).then(onDone)
       }}
     >
-      <Field label="Nombre" hint="Así lo vas a escribir. Plurales y tildes se reconocen solos.">
-        <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Guiso de la abuela" />
+      <Field label={t('Nombre')} hint={t('Así lo vas a escribir. Plurales y tildes se reconocen solos.')}>
+        <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder={t('Guiso de la abuela')} />
       </Field>
-      <div className="grid grid-cols-2 gap-1 rounded-xl bg-paper p-1 text-sm dark:bg-neutral-900" role="group" aria-label="Calorías por">
+      <div className="grid grid-cols-2 gap-1 rounded-xl bg-paper p-1 text-sm dark:bg-neutral-900" role="group" aria-label={t('Calorías por')}>
         {(
           [
-            ['unit', 'Por unidad / porción'],
-            ['100g', 'Por 100 g'],
+            ['unit', t('Por unidad / porción')],
+            ['100g', t('Por 100 g')],
           ] as const
         ).map(([v, l]) => (
           <button
@@ -329,14 +325,17 @@ export function CustomFoodForm({ food, initialName = '', onDone }: { food?: Cust
           </button>
         ))}
       </div>
-      <Field label={per === 'unit' ? 'kcal de una unidad' : 'kcal cada 100 g'}>
+      <Field label={per === 'unit' ? t('kcal de una unidad') : t('kcal cada 100 g')}>
         <input inputMode="numeric" className={inputCls} value={kcal} onChange={(e) => setKcal(e.target.value)} placeholder={per === 'unit' ? '450' : '250'} />
       </Field>
-      <Field label="Peso de una unidad en g (opcional)" hint={per === 'unit' ? 'Si lo ponés, también podés escribirlo en gramos.' : 'Si lo ponés, también podés escribir «2 …» en unidades.'}>
-        <input inputMode="decimal" className={inputCls} value={grams} onChange={(e) => setGrams(e.target.value)} placeholder="opcional" />
+      <Field
+        label={t('Peso de una unidad en g (opcional)')}
+        hint={per === 'unit' ? t('Si lo ponés, también podés escribirlo en gramos.') : t('Si lo ponés, también podés escribir «2 …» en unidades.')}
+      >
+        <input inputMode="decimal" className={inputCls} value={grams} onChange={(e) => setGrams(e.target.value)} placeholder={t('opcional')} />
       </Field>
       <Button type="submit" variant="primary" className="w-full" disabled={!valid}>
-        Guardar alimento
+        {t('Guardar alimento')}
       </Button>
     </form>
   )
@@ -344,8 +343,8 @@ export function CustomFoodForm({ food, initialName = '', onDone }: { food?: Cust
 
 function describeCustom(f: CustomFood): string {
   const unit = f.unitGrams ? ` (${formatQty(f.unitGrams)} g)` : ''
-  if (f.kcalPerUnit !== undefined) return `${formatKcal(f.kcalPerUnit)} kcal por unidad${unit}`
-  return `${formatKcal(f.kcal100 ?? 0)} kcal cada 100 g${f.unitGrams ? ` · unidad de ${formatQty(f.unitGrams)} g` : ''}`
+  if (f.kcalPerUnit !== undefined) return t('{n} kcal por unidad', { n: formatKcal(f.kcalPerUnit) }) + unit
+  return t('{n} kcal cada 100 g', { n: formatKcal(f.kcal100 ?? 0) }) + (f.unitGrams ? ' · ' + t('unidad de {n} g', { n: formatQty(f.unitGrams) }) : '')
 }
 
 /** "Mis alimentos": list to edit or delete custom foods. */
@@ -354,9 +353,9 @@ export function MyFoodsCard() {
   const [editing, setEditing] = useState<CustomFood | 'new' | null>(null)
   return (
     <Card>
-      <SectionTitle right={<Button onClick={() => setEditing('new')}>+ Agregar</Button>}>Mis alimentos</SectionTitle>
+      <SectionTitle right={<Button onClick={() => setEditing('new')}>{t('+ Agregar')}</Button>}>{t('Mis alimentos')}</SectionTitle>
       {!foods?.length ? (
-        <Empty>Cuando escribas algo que no conozco, guardalo acá y la próxima vez lo reconozco. Tus alimentos tienen prioridad sobre el diccionario.</Empty>
+        <Empty>{t('Cuando escribas algo que no conozco, guardalo acá y la próxima vez lo reconozco. Tus alimentos tienen prioridad sobre el diccionario.')}</Empty>
       ) : (
         <ul className="divide-y divide-line dark:divide-neutral-700">
           {foods.map((f) => (
@@ -365,14 +364,14 @@ export function MyFoodsCard() {
                 <span className="block truncate">{f.name}</span>
                 <span className={hintCls}>{describeCustom(f)}</span>
               </button>
-              <button className="px-2 text-ink-soft" aria-label={`Borrar ${f.name}`} onClick={() => void deleteCustomFood(f.id)}>
+              <button className="px-2 text-ink-soft" aria-label={t('Borrar {name}', { name: f.name })} onClick={() => void deleteCustomFood(f.id)}>
                 ✕
               </button>
             </li>
           ))}
         </ul>
       )}
-      <Sheet open={editing !== null} onClose={() => setEditing(null)} title={editing === 'new' ? 'Nuevo alimento' : 'Editar alimento'}>
+      <Sheet open={editing !== null} onClose={() => setEditing(null)} title={editing === 'new' ? t('Nuevo alimento') : t('Editar alimento')}>
         {editing !== null && <CustomFoodForm key={editing === 'new' ? 'new' : editing.id} food={editing === 'new' ? undefined : editing} onDone={() => setEditing(null)} />}
       </Sheet>
     </Card>
@@ -386,7 +385,7 @@ export function FoodEntryList({ entries }: { entries: FoodEntry[] }) {
     <ul className="mt-3 divide-y divide-line dark:divide-neutral-700">
       {entries.map((f) => {
         const m = MEALS.find((x) => x.value === f.meal)
-        const title = f.label ?? m?.label ?? 'Comida'
+        const title = f.label ?? m?.label ?? t('Comida')
         const head = (
           <>
             <span className="text-lg">{m?.icon ?? '🍴'}</span>
@@ -399,7 +398,7 @@ export function FoodEntryList({ entries }: { entries: FoodEntry[] }) {
             {f.items?.length ? (
               <details className="min-w-0 flex-1">
                 <summary className="flex cursor-pointer list-none items-center gap-2">{head}</summary>
-                <ul className="mt-1 space-y-0.5 pl-8 text-sm" aria-label={`Detalle de ${title}`}>
+                <ul className="mt-1 space-y-0.5 pl-8 text-sm" aria-label={t('Detalle de {name}', { name: title })}>
                   {f.items.map((it, i) => (
                     <li key={i} className="flex gap-2">
                       <span className="min-w-0 flex-1 truncate">{it.text}</span>
@@ -412,7 +411,7 @@ export function FoodEntryList({ entries }: { entries: FoodEntry[] }) {
             ) : (
               <div className="flex min-w-0 flex-1 items-center gap-2">{head}</div>
             )}
-            <button className="px-2 text-ink-soft" aria-label={`Borrar ${title}`} onClick={() => void deleteFood(f.id)}>
+            <button className="px-2 text-ink-soft" aria-label={t('Borrar {name}', { name: title })} onClick={() => void deleteFood(f.id)}>
               ✕
             </button>
           </li>
@@ -445,15 +444,15 @@ export function QuickFoodForm({ today }: { today: ISODate }) {
       }}
     >
       <div className="grid grid-cols-[1fr_auto] gap-2">
-        <input className={inputCls} value={value} onChange={(e) => setValue(e.target.value)} placeholder="2 huevos, 1 tostada · o 350" aria-label="Comida o kcal" />
-        <Button type="submit" variant="primary" disabled={!valid} aria-label="Sumar comida">
-          Sumar
+        <input className={inputCls} value={value} onChange={(e) => setValue(e.target.value)} placeholder={t('2 huevos, 1 tostada · o 350')} aria-label={t('Comida o kcal')} />
+        <Button type="submit" variant="primary" disabled={!valid} aria-label={t('Sumar comida')}>
+          {t('Sumar')}
         </Button>
       </div>
       {analysis && analysis.lines.length > 0 && (
         <p className={hintCls}>
           {unresolved.length
-            ? `⚠️ No reconozco «${unresolved[0].raw}». Cargalo en Salud.`
+            ? t('⚠️ No reconozco «{name}». Cargalo en Salud.', { name: unresolved[0].raw })
             : `≈ ${formatKcal(kcal)} kcal · ${analysis.lines.map((l) => (l.status === 'ok' ? l.food.name : l.raw)).join(', ')}`}
         </p>
       )}

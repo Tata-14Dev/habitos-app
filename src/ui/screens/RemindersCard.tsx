@@ -4,13 +4,14 @@ import { updateSettings } from '../../data/repo'
 import { syncConfigured } from '../../data/supabase'
 import { Button, Card, inputCls, SectionTitle } from '../components'
 import { useSettings, useSyncState } from '../hooks'
+import { t } from '../i18n'
 
 const REASONS: Record<string, string> = {
-  'no-key': 'Falta configurar la clave de notificaciones (VITE_VAPID_PUBLIC_KEY). Ver README.',
+  'no-key': t('Falta configurar la clave de notificaciones (VITE_VAPID_PUBLIC_KEY). Ver README.'),
   'ios-not-installed':
-    'En iPhone las notificaciones solo funcionan con la app instalada: en Safari tocá Compartir → "Agregar a pantalla de inicio" y abrila desde el ícono.',
-  unsupported: 'Este navegador no soporta notificaciones push.',
-  denied: 'Las notificaciones están bloqueadas. Habilitalas en Ajustes del sistema → Notificaciones → Hábitos.',
+    t('En iPhone las notificaciones solo funcionan con la app instalada: en Safari tocá Compartir → "Agregar a pantalla de inicio" y abrila desde el ícono.'),
+  unsupported: t('Este navegador no soporta notificaciones push.'),
+  denied: t('Las notificaciones están bloqueadas. Habilitalas en Ajustes del sistema → Notificaciones → Hábitos.'),
 }
 
 export function RemindersCard() {
@@ -28,12 +29,12 @@ export function RemindersCard() {
 
   return (
     <Card>
-      <SectionTitle>Recordatorio de la mañana</SectionTitle>
+      <SectionTitle>{t('Recordatorio de la mañana')}</SectionTitle>
       <p className="mb-3 text-sm text-ink-soft dark:text-neutral-400">
-        Una notificación por día con tus tareas, lo que toca de cada plan y los hábitos.
+        {t('Una notificación por día con tus tareas, lo que toca de cada plan y los hábitos.')}
       </p>
       <label className="flex min-h-11 items-center justify-between gap-3">
-        <span>Hora</span>
+        <span>{t('Hora')}</span>
         <input
           type="time"
           className={inputCls + ' max-w-32'}
@@ -43,7 +44,7 @@ export function RemindersCard() {
       </label>
 
       {!signedIn ? (
-        <p className="mt-3 text-sm">Iniciá sesión arriba para activar los recordatorios (los manda el servidor).</p>
+        <p className="mt-3 text-sm">{t('Iniciá sesión arriba para activar los recordatorios (los manda el servidor).')}</p>
       ) : !support.ok ? (
         <p className="mt-3 text-sm">{REASONS[support.reason]}</p>
       ) : (
@@ -51,9 +52,9 @@ export function RemindersCard() {
           <p className="text-sm">
             {settings.reminderEnabled
               ? here
-                ? `✅ Activado en este dispositivo, todos los días a las ${settings.reminderTime}.`
-                : `Activado en tu cuenta, pero no en este dispositivo.`
-              : 'Desactivado.'}
+                ? t('✅ Activado en este dispositivo, todos los días a las {time}.', { time: settings.reminderTime })
+                : t('Activado en tu cuenta, pero no en este dispositivo.')
+              : t('Desactivado.')}
           </p>
           {!here ? (
             <Button
@@ -64,11 +65,11 @@ export function RemindersCard() {
                 setBusy(true)
                 const err = await enablePush()
                 setBusy(false)
-                setMsg(err ? REASONS[err] ?? err : '✅ Listo. Mañana a las ' + settings.reminderTime + ' te llega el primero.')
+                setMsg(err ? REASONS[err] ?? err : t('✅ Listo. Mañana a las {time} te llega el primero.', { time: settings.reminderTime }))
                 setHere(await thisDeviceSubscribed())
               }}
             >
-              🔔 Activar en este dispositivo
+              {t('🔔 Activar en este dispositivo')}
             </Button>
           ) : (
             <Button
@@ -76,10 +77,10 @@ export function RemindersCard() {
               onClick={async () => {
                 await disablePush()
                 setHere(false)
-                setMsg('Recordatorios desactivados.')
+                setMsg(t('Recordatorios desactivados.'))
               }}
             >
-              Desactivar
+              {t('Desactivar')}
             </Button>
           )}
         </div>
@@ -87,8 +88,8 @@ export function RemindersCard() {
       {signedIn && support.ok && (
         <label className="mt-3 flex min-h-11 items-center justify-between gap-3 border-t border-line pt-3 dark:border-neutral-700">
           <span>
-            Resumen semanal
-            <span className="block text-xs text-ink-soft dark:text-neutral-400">Los domingos a las 20: hábitos, planes y peso de la semana.</span>
+            {t('Resumen semanal')}
+            <span className="block text-xs text-ink-soft dark:text-neutral-400">{t('Los domingos a las 20: hábitos, planes y peso de la semana.')}</span>
           </span>
           <input
             type="checkbox"
@@ -99,7 +100,7 @@ export function RemindersCard() {
         </label>
       )}
       {msg && <p className="mt-2 text-sm">{msg}</p>}
-      {isIOS() && <p className="mt-2 text-xs text-ink-soft">Requiere iOS 16.4 o posterior.</p>}
+      {isIOS() && <p className="mt-2 text-xs text-ink-soft">{t('Requiere iOS 16.4 o posterior.')}</p>}
     </Card>
   )
 }

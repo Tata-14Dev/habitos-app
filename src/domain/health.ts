@@ -7,6 +7,7 @@
  *   least-squares line over the last 28 days, and the goal date extrapolates that rate.
  */
 import { addDays, compareISO, diffDays, eachDay, type ISODate } from './dates'
+import { fmtFixed, fmtThousands } from './numberFormat'
 
 export interface WeightEntry {
   date: ISODate
@@ -141,10 +142,10 @@ export function weightSummary(entries: readonly WeightEntry[], goal: number | un
 
 /** "72,4" */
 export function formatKg(n: number): string {
-  return round1(n).toFixed(1).replace('.', ',')
+  return fmtFixed(round1(n), 1)
 }
 
 /** "1.850" */
 export function formatKcal(n: number): string {
-  return Math.round(n).toLocaleString('es-AR')
+  return fmtThousands(Math.round(n))
 }

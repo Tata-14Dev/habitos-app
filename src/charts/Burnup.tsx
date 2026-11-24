@@ -4,11 +4,13 @@
  * Green steps validated with the dataviz palette script (light #38761D, dark #67A34C).
  */
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { formatAR } from '../domain/dates'
 import type { BurnupPoint } from '../domain/burnup'
 import { useIsDark } from '../ui/theme'
+import { fmtDate } from '../ui/format'
+import { t } from '../ui/i18n'
+import { fmtDecimal } from '../domain/numberFormat'
 
-const NAMES: Record<string, string> = { real: 'Real', projection: 'Proyección', plan: 'Plan original' }
+const NAMES: Record<string, string> = { real: t('Real'), projection: t('Proyección'), plan: t('Plan original') }
 
 export function BurnupChart({ data, total, unit, height = 200 }: { data: BurnupPoint[]; total: number; unit?: string; height?: number }) {
   const dark = useIsDark()
@@ -16,23 +18,22 @@ export function BurnupChart({ data, total, unit, height = 200 }: { data: BurnupP
   const ink = dark ? '#a3a3a3' : '#666666'
   const grid = dark ? '#404040' : '#EFEFEF'
   const surface = dark ? '#262626' : '#ffffff'
-  const rows = data.map((p) => ({ ...p, label: formatAR(p.date, false) }))
-  const fmt = (v: number) => String(Math.round(v * 10) / 10).replace('.', ',')
+  const rows = data.map((p) => ({ ...p, label: fmtDate(p.date, false) }))
+  const fmt = (v: number) => fmtDecimal(Math.round(v * 10) / 10)
   return (
     <div>
       <div className="mb-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-soft dark:text-neutral-400" aria-hidden>
         <span className="flex items-center gap-1">
-          <span className="inline-block h-0.5 w-4 rounded" style={{ background: green }} /> Real
+          <span className="inline-block h-0.5 w-4 rounded" style={{ background: green }} /> {NAMES.real}
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block w-4 border-t-2 border-dashed" style={{ borderColor: green }} /> Proyección
+          <span className="inline-block w-4 border-t-2 border-dashed" style={{ borderColor: green }} /> {NAMES.projection}
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block w-4 border-t-2 border-dashed" style={{ borderColor: ink }} /> Plan original
+          <span className="inline-block w-4 border-t-2 border-dashed" style={{ borderColor: ink }} /> {NAMES.plan}
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block w-4 border-t border-dotted" style={{ borderColor: ink }} /> Total ({fmt(total)}
-          {unit ? ` ${unit}` : ''})
+          <span className="inline-block w-4 border-t border-dotted" style={{ borderColor: ink }} /> {t('Total ({n})', { n: `${fmt(total)}${unit ? ` ${unit}` : ''}` })}
         </span>
       </div>
       <div style={{ height }} className="w-full">

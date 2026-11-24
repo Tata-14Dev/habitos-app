@@ -1,7 +1,5 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { formatAR } from '../../domain/dates'
-import { marginLabel } from '../../domain/plans'
 import { createPlan } from '../../data/repo'
 import { loadExample } from '../../data/seed'
 import type { Plan } from '../../data/types'
@@ -11,6 +9,8 @@ import { usePlanModel } from '../usePlanModel'
 import { AmountSummary } from './AmountPlan'
 import { CurrentLine } from './CurrentLine'
 import { PlanForm } from './PlanForm'
+import { fmtDate, marginText } from '../format'
+import { t } from '../i18n'
 
 export function PlansScreen() {
   const plans = usePlans()
@@ -20,26 +20,26 @@ export function PlansScreen() {
   return (
     <div className="space-y-5">
       <header className="flex items-end justify-between pt-2">
-        <h1 className="text-2xl font-semibold">Planes</h1>
+        <h1 className="text-2xl font-semibold">{t('Planes')}</h1>
         <Button variant="primary" onClick={() => setCreating(true)}>
-          + Nuevo
+          {t('+ Nuevo')}
         </Button>
       </header>
 
       {!plans?.length ? (
         <Card>
-          <Empty>Todavía no tenés planes.</Empty>
+          <Empty>{t('Todavía no tenés planes.')}</Empty>
           <Button className="w-full" onClick={() => void loadExample()}>
-            Cargar ejemplo (SOC Level 1)
+            {t('Cargar ejemplo (SOC Level 1)')}
           </Button>
         </Card>
       ) : (
         plans.map((p) => <PlanCard key={p.id} plan={p} />)
       )}
 
-      <Sheet open={creating} onClose={() => setCreating(false)} title="Nuevo plan">
+      <Sheet open={creating} onClose={() => setCreating(false)} title={t('Nuevo plan')}>
         <PlanForm
-          submitLabel="Crear plan"
+          submitLabel={t('Crear plan')}
           onSubmit={async (v) => {
             const plan = await createPlan(v)
             setCreating(false)
@@ -56,7 +56,7 @@ function PlanCard({ plan }: { plan: Plan }) {
   return (
     <Link to={`/planes/${plan.id}`} className="block">
       <Card>
-        <SectionTitle right={<span className="text-sm">límite {formatAR(plan.deadline, false)}</span>}>{plan.name}</SectionTitle>
+        <SectionTitle right={<span className="text-sm">{t('límite {date}', { date: fmtDate(plan.deadline, false) })}</span>}>{plan.name}</SectionTitle>
         {plan.kind === 'amount' ? <AmountSummary plan={plan} today={today} /> : <ItemsSummary plan={plan} today={today} />}
       </Card>
     </Link>
@@ -70,9 +70,9 @@ function ItemsSummary({ plan, today }: { plan: Plan; today: string }) {
     <>
         <div className="mb-1 flex justify-between text-sm">
           <span>
-            {model?.doneCount ?? 0}/{model?.total ?? 0} {plan.unit ?? 'hechos'}
+            {model?.doneCount ?? 0}/{model?.total ?? 0} {plan.unit ?? t('hechos')}
           </span>
-          {model?.metrics.ok && model.metrics.value.marginDays !== null && <span>{marginLabel(model.metrics.value.marginDays)}</span>}
+          {model?.metrics.ok && model.metrics.value.marginDays !== null && <span>{marginText(model.metrics.value.marginDays)}</span>}
         </div>
         <ProgressBar value={model?.total ? model.doneCount / model.total : null} />
         {items && <CurrentLine items={items} />}

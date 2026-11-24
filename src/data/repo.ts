@@ -91,6 +91,8 @@ export interface PlanInput {
   blockedDates: ISODate[]
   /** Create a linked habit "Estudiar <name>" that counts as done on days with progress. */
   withHabit: boolean
+  /** Name for that habit (the UI passes it translated); defaults to "Estudiar <name>". */
+  habitName?: string
   itemsText?: string
 }
 
@@ -98,7 +100,7 @@ export async function createPlan(input: PlanInput): Promise<Plan> {
   const planId = newId()
   let linkedHabitId: string | undefined
   if (input.withHabit) {
-    const h = await saveHabit({ name: `Estudiar ${input.name}`, emoji: '📚', startDate: input.startDate })
+    const h = await saveHabit({ name: input.habitName ?? `Estudiar ${input.name}`, emoji: '📚', startDate: input.startDate })
     linkedHabitId = h.id
   }
   const plan = await store.put('plans', {

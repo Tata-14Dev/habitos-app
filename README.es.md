@@ -28,6 +28,7 @@ Llevaba mis hábitos y planes de estudio en planillas. En la compu andaban bien,
 - **Sincronización entre dispositivos.** Login con mail y contraseña en Supabase; si hay conflicto, gana el último cambio.
 - **Recordatorio push a la mañana.** Web Push a la PWA instalada en iOS. Lo programa `pg_cron` y lo manda una Edge Function de Supabase, en la zona horaria de cada usuario.
 - **Seguimiento opcional de peso y calorías.** Se activa en Ajustes. Escribís lo que comiste (`200 g arroz, 2 huevos, 1 taza de leche`) y la app busca cada alimento en un diccionario de ~300 comidas argentinas (valores aproximados) y en «Mis alimentos», y calcula las kcal con vista previa; también podés cargar kcal directo. Ver [docs/COMIDAS.md](docs/COMIDAS.md). Todo contra un objetivo diario, más un pesaje por día. Como el peso diario varía mucho, la app muestra la tendencia de 7 días, el ritmo semanal (calculado con una recta de mínimos cuadrados sobre las últimas 4 semanas) y la fecha en que llegarías a tu peso meta a ese ritmo.
+- **Español e inglés.** La interfaz sigue el idioma del dispositivo (o un ajuste): textos, fechas y formato de números. El dictado y la carga de comidas entienden español, porque están armados sobre frases y comidas argentinas. Un test falla si algún texto de la interfaz no tiene traducción.
 - **Respaldo.** Exportás e importás todos tus datos en JSON.
 
 ## Arquitectura

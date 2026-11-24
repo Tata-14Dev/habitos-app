@@ -10,6 +10,7 @@ import { computePlanMetrics, projectSchedule, type DateMap, type PlanMetrics } f
 import { ensureBaseline, saveProjection } from '../data/repo'
 import { computeAmountMetrics, type AmountPlanMetrics } from '../domain/progress'
 import type { Plan, PlanItem, PlanLog } from '../data/types'
+import { t } from './i18n'
 
 export interface PlanModel {
   projection: Safe<DateMap>
@@ -31,7 +32,7 @@ export function usePlanModel(plan: Plan | undefined, items: PlanItem[] | undefin
       ? safeCall(() => computePlanMetrics(sItems, plan.baseline, projection.value, config, today))
       : projection.ok === false && 'notImplemented' in projection
         ? projection
-        : { ok: false, error: new Error('Sin proyección') }
+        : { ok: false, error: new Error(t('Sin proyección')) }
     const pending = new Set<string>()
     for (const r of [projection, metrics]) if (!r.ok && 'notImplemented' in r) pending.add(r.notImplemented)
     const missingBaseline = items.some((i) => !i.prior && !plan.baseline[i.id])

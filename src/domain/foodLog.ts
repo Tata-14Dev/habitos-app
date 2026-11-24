@@ -16,6 +16,7 @@
  * an unresolved line with a reason the UI can show.
  */
 import { FOODS, type FoodDef, type HouseholdUnit } from './foods'
+import { fmtDecimal, fmtThousands } from './numberFormat'
 
 export type FoodUnit = 'g' | 'ml' | HouseholdUnit
 
@@ -475,7 +476,7 @@ function unitPhrase(quantity: number, unit: FoodUnit): string {
 
 /** "1,5" / "0,5" / "200" */
 export function formatQty(n: number): string {
-  return (Math.round(n * 100) / 100).toString().replace('.', ',')
+  return fmtDecimal(n)
 }
 
 /** Resolves one parsed item against the index. */
@@ -553,5 +554,5 @@ export function analyzeFoodText(text: string, index: FoodIndex = DEFAULT_INDEX):
 
 /** "200 g", "240 ml", "≈ 100 g" — the measured amount of a resolved line. */
 export function amountLabel(line: ResolvedLine): string | null {
-  return line.amount === undefined ? null : `${line.amount.toLocaleString('es-AR')} ${line.measure}`
+  return line.amount === undefined ? null : `${fmtThousands(line.amount, 1)} ${line.measure}`
 }

@@ -13,6 +13,8 @@ import { addHabitAmount, setHabitAmount, setHabitDone } from '../../data/repo'
 import type { Habit, HabitLog, Plan } from '../../data/types'
 import { Button, Check, Field, inputCls, ProgressBar, Sheet } from '../components'
 import { TIME_OF_DAY } from '../habitText'
+import { fmtDecimal } from '../../domain/numberFormat'
+import { t } from '../i18n'
 
 const parseNum = (s: string) => Number(s.replace(',', '.'))
 
@@ -33,7 +35,7 @@ function HabitName({ h, sub }: { h: Habit; sub?: string }) {
 
 /** Sheet to set the exact amount of a day. */
 function AmountSheet({ habit, date, current, onClose }: { habit: Habit; date: ISODate; current: number; onClose: () => void }) {
-  const [value, setValue] = useState(current ? String(current).replace('.', ',') : '')
+  const [value, setValue] = useState(current ? fmtDecimal(current) : '')
   const n = parseNum(value)
   const unit = habit.goal?.type === 'amount' ? habit.goal.unit : ''
   return (
@@ -45,11 +47,11 @@ function AmountSheet({ habit, date, current, onClose }: { habit: Habit; date: IS
         void setHabitAmount(habit.id, date, n).then(onClose)
       }}
     >
-      <Field label={`Cuánto hiciste hoy (${unit})`} hint="Reemplaza lo registrado hoy. 0 lo borra.">
+      <Field label={t('Cuánto hiciste hoy ({unit})', { unit })} hint={t('Reemplaza lo registrado hoy. 0 lo borra.')}>
         <input inputMode="decimal" className={inputCls} value={value} onChange={(e) => setValue(e.target.value)} autoFocus />
       </Field>
       <Button type="submit" variant="primary" className="w-full" disabled={!(n >= 0) || value.trim() === ''}>
-        Guardar
+        {t('Guardar')}
       </Button>
     </form>
   )
@@ -85,10 +87,10 @@ function AmountRow({
           onChange={(v) => void (period === 'day' ? setHabitAmount(habit.id, today, v ? target : 0) : setEditing(true))}
         />
         <HabitName h={habit} sub={label} />
-        <Button className="px-3 text-sm" onClick={() => void addHabitAmount(habit.id, today, step)} aria-label={`Sumar ${formatAmount(step, unit)} a ${habit.name}`}>
+        <Button className="px-3 text-sm" onClick={() => void addHabitAmount(habit.id, today, step)} aria-label={t('Sumar {amount} a {name}', { amount: formatAmount(step, unit), name: habit.name })}>
           +{formatAmount(step)}
         </Button>
-        <Button className="px-3 text-sm" onClick={() => setEditing(true)} aria-label={`Otra cantidad para ${habit.name}`}>
+        <Button className="px-3 text-sm" onClick={() => setEditing(true)} aria-label={t('Otra cantidad para {name}', { name: habit.name })}>
           ✎
         </Button>
       </div>
@@ -139,7 +141,7 @@ export function TodayHabitList({
               if (h.goal?.type === 'amount') {
                 const a = amountOf(h.id, today)
                 return (
-                  <AmountRow key={h.id} habit={h} today={today} todayAmount={a} done={done} label={`${formatAmount(a)}/${formatAmount(h.goal.target, h.goal.unit)} hoy`} />
+                  <AmountRow key={h.id} habit={h} today={today} todayAmount={a} done={done} label={t('{done}/{target} hoy', { done: formatAmount(a), target: formatAmount(h.goal.target, h.goal.unit) })} />
                 )
               }
               const linked = plans.find((p) => p.linkedHabitId === h.id)
@@ -148,7 +150,13 @@ export function TodayHabitList({
                   <Check checked={done} label={h.name} onChange={(v) => void setHabitDone(h.id, today, v)} />
                   <HabitName
                     h={h}
-                    sub={linked ? `Se marca solo al ${linked.kind === 'amount' ? 'registrar avance en' : 'hacer un ítem de'} ${linked.name}` : undefined}
+                    sub={
+                      linked
+                        ? linked.kind === 'amount'
+                          ? t('Se marca solo al registrar avance en {name}', { name: linked.name })
+                          : t('Se marca solo al hacer un ítem de {name}', { name: linked.name })
+                        : undefined
+                    }
                   />
                 </li>
               )
@@ -181,7 +189,7 @@ export function WeeklyGoalList({
       {weekly.map((h) => {
         const p = weekProgress(h, logs, today, mondayFirst)
         const unit = h.goal?.type === 'amount' ? h.goal.unit : undefined
-        const label = `${formatAmount(p.done)}/${formatAmount(p.target, unit)} esta semana${p.met ? ' ✅' : ''}`
+        const label = t('{done}/{target} esta semana', { done: formatAmount(p.done), target: formatAmount(p.target, unit) }) + (p.met ? ' ✅' : '')
         return h.goal?.type === 'amount' ? (
           <AmountRow
             key={h.id}
@@ -195,7 +203,7 @@ export function WeeklyGoalList({
         ) : (
           <li key={h.id} className="py-2">
             <div className="flex items-center gap-3">
-              <Check checked={doneToday.has(h.id)} label={`${h.name} hoy`} onChange={(v) => void setHabitDone(h.id, today, v)} />
+              <Check checked={doneToday.has(h.id)} label={t('{name} hoy', { name: h.name })} onChange={(v) => void setHabitDone(h.id, today, v)} />
               <HabitName h={h} sub={label} />
             </div>
             <div className="mt-2">

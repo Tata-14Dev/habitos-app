@@ -1,16 +1,18 @@
 import { useState } from 'react'
-import { formatAR, parseAR, todayISO, type ISODate } from '../../domain/dates'
+import { parseAR, todayISO, type ISODate } from '../../domain/dates'
 import { numberedItems, parseItemList, suggestedDeadline } from '../../domain/plans'
 import { formatAmount } from '../../domain/progress'
 import type { PlanInput } from '../../data/repo'
 import type { Plan, PlanKind } from '../../data/types'
 import { Button, cx, Field, inputCls, MoreOptions } from '../components'
-import { longDay, WEEKDAY_NAMES } from '../format'
+import { WEEKDAY_NAMES, fmtDate, longDay } from '../format'
+import { fmtDecimal } from '../../domain/numberFormat'
+import { t } from '../i18n'
 
 const REST_PRESETS: { label: string; days: number[] }[] = [
-  { label: 'Ninguno', days: [] },
-  { label: 'Domingo', days: [0] },
-  { label: 'Sáb y dom', days: [6, 0] },
+  { label: t('Ninguno'), days: [] },
+  { label: t('Domingo'), days: [0] },
+  { label: t('Sáb y dom'), days: [6, 0] },
 ]
 
 const parseNum = (s: string) => Number(s.replace(',', '.'))
@@ -55,7 +57,7 @@ export function PlanForm({
   const [name, setName] = useState(plan?.name ?? '')
   const [kind, setKind] = useState<PlanKind>(plan?.kind ?? 'items')
   const [unit, setUnit] = useState(plan?.unit ?? '')
-  const [target, setTarget] = useState(plan?.target ? String(plan.target).replace('.', ',') : '')
+  const [target, setTarget] = useState(plan?.target ? fmtDecimal(plan.target) : '')
   // Items: a count ("34", named "Room" → Room 1…34) or a pasted list.
   const [itemsMode, setItemsMode] = useState<'count' | 'list'>('count')
   const [count, setCount] = useState('')
@@ -63,10 +65,10 @@ export function PlanForm({
   const [doneUntil, setDoneUntil] = useState('')
   const [prefix, setPrefix] = useState('')
   const [itemsText, setItemsText] = useState('')
-  const [pace, setPace] = useState(String(plan?.pace ?? 1).replace('.', ','))
+  const [pace, setPace] = useState(fmtDecimal(plan?.pace ?? 1))
   const [startDate, setStart] = useState(plan?.startDate ?? todayISO())
   const [rest, setRest] = useState<number[]>(plan?.restWeekdays ?? [])
-  const [blocked, setBlocked] = useState((plan?.blockedDates ?? []).map((d) => formatAR(d)).join(', '))
+  const [blocked, setBlocked] = useState((plan?.blockedDates ?? []).map((d) => fmtDate(d)).join(', '))
   // New plans: the end date is automatic unless the user sets one. Edits keep the saved one.
   const [customDeadline, setCustomDeadline] = useState(editing)
   const [deadline, setDeadline] = useState(plan?.deadline ?? '')
@@ -93,7 +95,7 @@ export function PlanForm({
   const total = isAmount ? targetNum : editing ? (currentTotal ?? 0) : itemsTotal - (priorValid ? priorNum : 0)
   const autoEnd = startDate && paceNum > 0 && blockedValid ? suggestedDeadline(total, { startDate, pace: paceNum, restWeekdays: rest, blockedDates }) : null
   const finalDeadline = customDeadline ? deadline : (autoEnd ?? '')
-  const unitLabel = unit.trim() || (isAmount ? 'unidades' : 'ítems')
+  const unitLabel = unit.trim() || (isAmount ? t('unidades') : t('ítems'))
 
   const valid =
     !!name.trim() &&
@@ -125,7 +127,8 @@ export function PlanForm({
           restWeekdays: [...rest].sort(),
           blockedDates,
           withHabit,
-          itemsText: isAmount || editing ? '' : itemsMode === 'count' ? numberedItems(prefix, countNum) : itemsText,
+          habitName: t('Estudiar {name}', { name: name.trim() }),
+          itemsText: isAmount || editing ? '' : itemsMode === 'count' ? numberedItems(prefix || t('Ítem'), countNum) : itemsText,
           priorCount: isAmount || editing ? 0 : priorNum,
         })
       }}
@@ -134,8 +137,8 @@ export function PlanForm({
         <div className="grid grid-cols-2 gap-2">
           {(
             [
-              ['items', '📋 Por ítems', 'Rooms, lecciones, capítulos'],
-              ['amount', '⏱️ Por cantidad', 'Horas, páginas, ejercicios'],
+              ['items', t('📋 Por ítems'), t('Rooms, lecciones, capítulos')],
+              ['amount', t('⏱️ Por cantidad'), t('Horas, páginas, ejercicios')],
             ] as const
           ).map(([k, label, hint]) => (
             <button
@@ -155,17 +158,17 @@ export function PlanForm({
         </div>
       )}
 
-      <Field label="Nombre">
-        <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder={isAmount ? 'Inglés B2' : 'SOC Level 1'} />
+      <Field label={t('Nombre')}>
+        <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder={isAmount ? t('Inglés B2') : 'SOC Level 1'} />
       </Field>
 
       {isAmount ? (
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Total a completar">
+          <Field label={t('Total a completar')}>
             <input inputMode="decimal" className={inputCls} value={target} onChange={(e) => setTarget(e.target.value)} placeholder="60" />
           </Field>
-          <Field label="Unidad">
-            <input className={inputCls} value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="horas" />
+          <Field label={t('Unidad')}>
+            <input className={inputCls} value={unit} onChange={(e) => setUnit(e.target.value)} placeholder={t('horas')} />
           </Field>
         </div>
       ) : (
@@ -175,27 +178,27 @@ export function PlanForm({
               value={itemsMode}
               onChange={setItemsMode}
               options={[
-                ['count', 'Cuántos son'],
-                ['list', 'Pegar la lista'],
+                ['count', t('Cuántos son')],
+                ['list', t('Pegar la lista')],
               ]}
             />
             {itemsMode === 'count' ? (
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="¿Cuántos en total?">
+                  <Field label={t('¿Cuántos en total?')}>
                     <input inputMode="numeric" className={inputCls} value={count} onChange={(e) => setCount(e.target.value)} placeholder="62" />
                   </Field>
-                  <Field label="Ya hiciste hasta el (opcional)">
+                  <Field label={t('Ya hiciste hasta el (opcional)')}>
                     <input inputMode="numeric" className={inputCls} value={doneUntil} onChange={(e) => setDoneUntil(e.target.value)} placeholder="0" />
                   </Field>
                 </div>
-                <Field label="Se llaman (opcional)" hint={`Quedan: ${numberedItems(prefix, 2).replace('\n', ', ')}…`}>
+                <Field label={t('Se llaman (opcional)')} hint={t('Quedan: {list}…', { list: numberedItems(prefix || t('Ítem'), 2).replace('\n', ', ') })}>
                   <input className={inputCls} value={prefix} onChange={(e) => setPrefix(e.target.value)} placeholder="Room" />
                 </Field>
               </div>
             ) : (
               <div className="space-y-3">
-                <Field label={`Uno por línea, opcional "Módulo: ítem"${listCount ? ` · ${listCount}` : ''}`}>
+                <Field label={t('Uno por línea, opcional "Módulo: ítem"') + (listCount ? ` · ${listCount}` : '')}>
                   <textarea
                     className={cx(inputCls, 'min-h-32 font-mono text-sm')}
                     value={itemsText}
@@ -203,7 +206,7 @@ export function PlanForm({
                     placeholder={'Intro: Room 1\nIntro: Room 2\nSIEM: Splunk Basics'}
                   />
                 </Field>
-                <Field label="Ya hiciste los primeros (opcional)">
+                <Field label={t('Ya hiciste los primeros (opcional)')}>
                   <input inputMode="numeric" className={inputCls} value={doneUntil} onChange={(e) => setDoneUntil(e.target.value)} placeholder="0" />
                 </Field>
               </div>
@@ -211,27 +214,33 @@ export function PlanForm({
             {priorNum > 0 && itemsTotal > 0 && (
               <p className={cx('text-sm', priorValid ? 'text-ink-soft dark:text-neutral-400' : 'text-amber-700 dark:text-amber-400')}>
                 {priorValid
-                  ? `Del 1 al ${priorNum} quedan como hechos antes del plan. El plan arranca en el ${priorNum + 1} y reparte los ${itemsTotal - priorNum} que faltan.`
-                  : `⚠️ Tiene que ser menor que el total (${itemsTotal}).`}
+                  ? t('Del 1 al {n} quedan como hechos antes del plan. El plan arranca en el {next} y reparte los {left} que faltan.', {
+                      n: priorNum,
+                      next: priorNum + 1,
+                      left: itemsTotal - priorNum,
+                    })
+                  : t('⚠️ Tiene que ser menor que el total ({n}).', { n: itemsTotal })}
               </p>
             )}
           </div>
         )
       )}
 
-      <Field label={`Ritmo: ${unitLabel} por día`} hint={isAmount ? 'Puede tener decimales: 1,5 por día.' : 'Puede ser 0,5: uno cada dos días.'}>
+      <Field label={t('Ritmo: {unit} por día', { unit: unitLabel })} hint={isAmount ? t('Puede tener decimales: 1,5 por día.') : t('Puede ser 0,5: uno cada dos días.')}>
         <input inputMode="decimal" className={inputCls} value={pace} onChange={(e) => setPace(e.target.value)} />
       </Field>
 
       <div className="rounded-xl bg-progress/15 p-3 text-sm dark:bg-progress/10" aria-live="polite">
         {customDeadline ? (
           <>
-            <span className="block">📅 Fecha límite: {deadline ? <strong>{formatAR(deadline)}</strong> : 'elegila en Más opciones'}</span>
+            <span className="block">
+              {t('📅 Fecha límite:')} {deadline ? <strong>{fmtDate(deadline)}</strong> : t('elegila en Más opciones')}
+            </span>
             {autoEnd && (
               <span className="mt-1 block text-ink-soft dark:text-neutral-400">
-                A este ritmo terminarías el {formatAR(autoEnd)}.{' '}
+                {t('A este ritmo terminarías el {date}.', { date: fmtDate(autoEnd) })}{' '}
                 <button type="button" className="underline" onClick={() => setCustomDeadline(false)}>
-                  Usar esa fecha
+                  {t('Usar esa fecha')}
                 </button>
               </span>
             )}
@@ -239,24 +248,31 @@ export function PlanForm({
         ) : autoEnd ? (
           <>
             <span className="block">
-              📅 Terminás el <strong className="first-letter:uppercase">{longDay(autoEnd)}</strong>
+              {t('📅 Terminás el')} <strong className="first-letter:uppercase">{longDay(autoEnd)}</strong>
             </span>
             <span className="block text-ink-soft dark:text-neutral-400">
-              {formatAmount(total)} {unitLabel} a {formatAmount(paceNum)} por día, desde {startDate === todayISO() ? 'hoy' : formatAR(startDate)}
-              {rest.length ? ', sin contar los días de descanso' : ''}.
+              {t('{total} {unit} a {pace} por día, desde {from}', {
+                total: formatAmount(total),
+                unit: unitLabel,
+                pace: formatAmount(paceNum),
+                from: startDate === todayISO() ? t('hoy') : fmtDate(startDate),
+              })}
+              {rest.length ? t(', sin contar los días de descanso') : ''}.
             </span>
           </>
         ) : (
-          <span className="text-ink-soft dark:text-neutral-400">📅 Completá {isAmount ? 'el total' : 'cuántos son'} y el ritmo, y te calculo la fecha de fin.</span>
+          <span className="text-ink-soft dark:text-neutral-400">
+            {isAmount ? t('📅 Completá el total y el ritmo, y te calculo la fecha de fin.') : t('📅 Completá cuántos son y el ritmo, y te calculo la fecha de fin.')}
+          </span>
         )}
       </div>
 
-      <MoreOptions hint="Inicio, días de descanso, fecha límite propia…">
+      <MoreOptions hint={t('Inicio, días de descanso, fecha límite propia…')}>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Inicio">
+          <Field label={t('Inicio')}>
             <input type="date" className={inputCls} value={startDate} onChange={(e) => setStart(e.target.value)} />
           </Field>
-          <Field label="Fecha límite">
+          <Field label={t('Fecha límite')}>
             <input
               type="date"
               className={inputCls}
@@ -269,7 +285,7 @@ export function PlanForm({
           </Field>
         </div>
         <div>
-          <span className="mb-1 block text-sm text-ink-soft dark:text-neutral-400">Días de descanso</span>
+          <span className="mb-1 block text-sm text-ink-soft dark:text-neutral-400">{t('Días de descanso')}</span>
           <div className="mb-2 grid grid-cols-3 gap-2">
             {REST_PRESETS.map((p) => (
               <Button key={p.label} type="button" className="text-sm" onClick={() => setRest(p.days)}>
@@ -288,18 +304,21 @@ export function PlanForm({
                   rest.includes(d) ? 'bg-ink text-white dark:bg-neutral-200 dark:text-neutral-900' : 'bg-white dark:bg-neutral-700',
                 )}
                 aria-pressed={rest.includes(d)}
-                aria-label={`Descanso ${WEEKDAY_NAMES[d]}`}
+                aria-label={t('Descanso {day}', { day: WEEKDAY_NAMES[d] })}
               >
                 {WEEKDAY_NAMES[d].slice(0, 2)}
               </button>
             ))}
           </div>
         </div>
-        <Field label="Días libres puntuales" hint={blockedValid ? 'Separados por coma: 24/12, 25/12, 31/12' : '⚠️ Hay una fecha que no entiendo (usá dd/mm o dd/mm/aaaa).'}>
+        <Field
+          label={t('Días libres puntuales')}
+          hint={blockedValid ? t('Separados por coma: 24/12, 25/12, 31/12') : t('⚠️ Hay una fecha que no entiendo (usá dd/mm o dd/mm/aaaa).')}
+        >
           <input className={inputCls} value={blocked} onChange={(e) => setBlocked(e.target.value)} placeholder="24/12, 25/12, 31/12" />
         </Field>
         {!isAmount && (
-          <Field label="Unidad (opcional)" hint='Se usa en los textos: "5/34 rooms".'>
+          <Field label={t('Unidad (opcional)')} hint={t('Se usa en los textos: "5/34 rooms".')}>
             <input className={inputCls} value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="rooms" />
           </Field>
         )}
@@ -307,7 +326,9 @@ export function PlanForm({
           <label className="flex min-h-11 items-center gap-3">
             <input type="checkbox" className="size-5 shrink-0 accent-progress" checked={withHabit} onChange={(e) => setWithHabit(e.target.checked)} />
             <span className="text-sm">
-              Crear el hábito "Estudiar {name || '…'}" (se marca solo cuando {isAmount ? 'registrás avance' : 'hacés un ítem'})
+              {isAmount
+                ? t('Crear el hábito "Estudiar {name}" (se marca solo cuando registrás avance)', { name: name || '…' })
+                : t('Crear el hábito "Estudiar {name}" (se marca solo cuando hacés un ítem)', { name: name || '…' })}
             </span>
           </label>
         )}

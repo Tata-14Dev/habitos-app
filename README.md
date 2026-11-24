@@ -4,7 +4,7 @@
 
 **A local-first habit tracker and study planner for phone and desktop.** It's an installable PWA that works fully offline, syncs between devices through Supabase, and sends a morning push notification to your iPhone.
 
-> **Live demo:** [open it with sample data](https://habitos-app-vtve.vercel.app/?demo=1) — six weeks of habits, a course halfway through, charts and health, in a separate local database (no account needed) · 🇦🇷 [Leer en español](README.es.md) · The app's UI is in Argentine Spanish.
+> **Live demo:** [open it with sample data](https://habitos-app-vtve.vercel.app/?demo=1) — six weeks of habits, a course halfway through, charts and health, in a separate local database (no account needed). The UI switches to English or Spanish with your device. · 🇦🇷 [Leer en español](README.es.md)
 
 <p align="center">
   <img src="docs/screenshots/today.png" width="210" alt="Today screen: dictated tasks parsed into a list">
@@ -28,6 +28,7 @@ I used to track habits and study plans in spreadsheets. They were fine on a lapt
 - **Multi-device sync.** Email and password auth with Supabase, plus last-write-wins conflict resolution.
 - **Morning push reminder.** Web Push to the installed iOS PWA, scheduled with `pg_cron` and sent by a Supabase Edge Function in each user's local time zone.
 - **Optional weight & calorie tracking.** Turned on in Settings. Log meals by typing what you ate (`200 g arroz, 2 huevos, 1 taza de leche`): the app looks each food up in a built-in dictionary of ~300 Argentine foods (approximate values) plus your own "Mis alimentos" and computes the kcal, with a live preview; plain kcal still works. See [docs/COMIDAS.md](docs/COMIDAS.md). Track that against a daily target and one weigh-in a day. Because daily weight is noisy, the app shows a 7-day trend, a weekly rate from a least-squares fit over the last 4 weeks, and the date you'd reach your goal weight at that rate.
+- **Spanish and English.** The UI follows the device language (or a setting): texts, dates and number formats. Voice dictation and meal parsing understand Spanish, since they're built around Argentine phrasing and foods. A unit test fails if any UI string lacks a translation.
 - **Backup.** Export and import of all data as JSON.
 
 ## Architecture

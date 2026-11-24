@@ -32,12 +32,50 @@ function rng(seed: number) {
   }
 }
 
-const MEALS: { meal: Meal; options: string[] }[] = [
-  { meal: 'desayuno', options: ['1 taza de leche, 2 tostadas y 1 cda de dulce de leche', '1 yogur con 30 g de avena y 1 banana', '2 huevos y 1 tostada'] },
-  { meal: 'almuerzo', options: ['200 g arroz, 150 g pollo y 1 tomate', '1 milanesa con 200 g de puré', '250 g fideos con 1 cda de aceite', '2 empanadas de carne y 1 manzana'] },
-  { meal: 'merienda', options: ['2 medialunas', '1 alfajor', '1 banana y 1 yogur'] },
-  { meal: 'cena', options: ['150 g carne y 1 plato de ensalada', '2 porciones de pizza', '1 tarta de verdura', '200 g pollo y 200 g papa'] },
+/** Meals as [text the parser reads (Spanish), label shown in English]. */
+const MEALS: { meal: Meal; options: [string, string][] }[] = [
+  {
+    meal: 'desayuno',
+    options: [
+      ['1 taza de leche, 2 tostadas y 1 cda de dulce de leche', 'Milk, 2 toasts and dulce de leche'],
+      ['1 yogur con 30 g de avena y 1 banana', 'Yogurt with oats and a banana'],
+      ['2 huevos y 1 tostada', '2 eggs and a toast'],
+    ],
+  },
+  {
+    meal: 'almuerzo',
+    options: [
+      ['200 g arroz, 150 g pollo y 1 tomate', 'Rice, chicken and a tomato'],
+      ['1 milanesa con 200 g de puré', 'Milanesa with mashed potatoes'],
+      ['250 g fideos con 1 cda de aceite', 'Pasta with olive oil'],
+      ['2 empanadas de carne y 1 manzana', '2 beef empanadas and an apple'],
+    ],
+  },
+  { meal: 'merienda', options: [['2 medialunas', '2 croissants'], ['1 alfajor', 'An alfajor'], ['1 banana y 1 yogur', 'A banana and a yogurt']] },
+  {
+    meal: 'cena',
+    options: [
+      ['150 g carne y 1 plato de ensalada', 'Steak and a salad'],
+      ['2 porciones de pizza', '2 slices of pizza'],
+      ['1 tarta de verdura', 'Vegetable pie'],
+      ['200 g pollo y 200 g papa', 'Chicken and potatoes'],
+    ],
+  },
 ]
+
+/** Visible names in the demo, per language. */
+const TEXT = {
+  es: {
+    cama: 'Hacer la cama', perro: 'Pasear al perro', pantallas: 'Sin pantallas antes de dormir', natacion: 'Natación', gym: 'Gimnasio', leer: 'Leer', paginas: 'páginas',
+    milestone1: 'Terminar el path', milestone1d: 'Una room por día, domingos libres', milestone2: 'Examen SAL1', milestone2d: 'Ventana de 24 h',
+    eng: 'Inglés B2', horas: 'horas', tasks: 'dentista a las 15 horas, comprar yerba, después llamar a Juan, pagar la luz',
+  },
+  en: {
+    cama: 'Make the bed', perro: 'Walk the dog', pantallas: 'No screens before bed', natacion: 'Swimming', gym: 'Gym', leer: 'Read', paginas: 'pages',
+    milestone1: 'Finish the path', milestone1d: 'One room a day, Sundays off', milestone2: 'SAL1 exam', milestone2d: '24-hour window',
+    eng: 'Spanish B2', horas: 'hours', tasks: 'dentist a las 15 horas, buy coffee, después call John, pay the electricity bill',
+  },
+}
 
 function foodEntry(text: string): { kcal: number; items: FoodItem[] } {
   const a = analyzeFoodText(text)
@@ -48,8 +86,16 @@ function foodEntry(text: string): { kcal: number; items: FoodItem[] } {
 }
 
 /** Fills the (demo) database once. Returns false if it already has data. */
-export async function loadDemoData(today: ISODate = todayISO()): Promise<boolean> {
+export async function loadDemoData(today: ISODate = todayISO(), lang: 'es' | 'en' = 'es'): Promise<boolean> {
   if ((await db.habits.count()) > 0) return false
+  // One transaction: much faster than hundreds of separate writes, and the UI goes from empty
+  // to complete in one step instead of showing half-loaded data.
+  await db.transaction('rw', db.tables, () => fill(today, lang))
+  return true
+}
+
+async function fill(today: ISODate, lang: 'es' | 'en') {
+  const T = TEXT[lang]
   const r = rng(20261124)
   const chance = (p: number) => r() < p
   const start = addDays(today, -41) // six weeks of history
@@ -58,12 +104,12 @@ export async function loadDemoData(today: ISODate = todayISO()): Promise<boolean
   await updateSettings({ healthEnabled: true, calorieTarget: 2100, weightGoal: 76 })
 
   // ── Habits of every type ──
-  const cama = await saveHabit({ name: 'Hacer la cama', emoji: '🛏️', startDate: start, kind: 'fixed', timeOfDay: 'morning' })
-  const perro = await saveHabit({ name: 'Pasear al perro', emoji: '🐕', startDate: start, kind: 'fixed', timeOfDay: 'afternoon' })
-  const pantallas = await saveHabit({ name: 'Sin pantallas antes de dormir', emoji: '📵', startDate: start, kind: 'fixed', timeOfDay: 'night' })
-  const natacion = await saveHabit({ name: 'Natación', emoji: '🏊', startDate: start, kind: 'scheduled', weekdays: [1, 3], timeOfDay: 'morning' })
-  const gym = await saveHabit({ name: 'Gimnasio', emoji: '🏋️', startDate: start, kind: 'progress', goal: { type: 'times', target: 3 } })
-  const leer = await saveHabit({ name: 'Leer', emoji: '📖', startDate: start, kind: 'progress', goal: { type: 'amount', period: 'day', target: 20, unit: 'páginas' } })
+  const cama = await saveHabit({ name: T.cama, emoji: '🛏️', startDate: start, kind: 'fixed', timeOfDay: 'morning' })
+  const perro = await saveHabit({ name: T.perro, emoji: '🐕', startDate: start, kind: 'fixed', timeOfDay: 'afternoon' })
+  const pantallas = await saveHabit({ name: T.pantallas, emoji: '📵', startDate: start, kind: 'fixed', timeOfDay: 'night' })
+  const natacion = await saveHabit({ name: T.natacion, emoji: '🏊', startDate: start, kind: 'scheduled', weekdays: [1, 3], timeOfDay: 'morning' })
+  const gym = await saveHabit({ name: T.gym, emoji: '🏋️', startDate: start, kind: 'progress', goal: { type: 'times', target: 3 } })
+  const leer = await saveHabit({ name: T.leer, emoji: '📖', startDate: start, kind: 'progress', goal: { type: 'amount', period: 'day', target: 20, unit: T.paginas } })
 
   for (const [i, d] of days.entries()) {
     const isToday = d === today
@@ -89,6 +135,7 @@ export async function loadDemoData(today: ISODate = todayISO()): Promise<boolean
     restWeekdays: [0],
     blockedDates: [],
     withHabit: true,
+    habitName: lang === 'en' ? 'Study SOC Level 1' : undefined,
   })
   await addItems(soc.id, Array.from({ length: 62 }, (_, i) => `Room ${i + 1}`).join('\n'), 20)
   const rooms = (await db.planItems.where('planId').equals(soc.id).toArray()).sort((a, b) => a.order - b.order)
@@ -98,15 +145,15 @@ export async function loadDemoData(today: ISODate = todayISO()): Promise<boolean
     const n = chance(0.15) ? 0 : chance(0.25) ? 2 : 1 // some days skipped, some days doubled
     for (let k = 0; k < n && next < rooms.length; k++) await setItemDone(rooms[next++].id, true, d)
   }
-  await saveMilestone({ planId: soc.id, title: 'Terminar el path', from: socStart, to: addDays(socStart, 50), description: 'Una room por día, domingos libres' })
-  await saveMilestone({ planId: soc.id, title: 'Examen SAL1', from: addDays(socStart, 60), to: addDays(socStart, 61), description: 'Ventana de 24 h' })
+  await saveMilestone({ planId: soc.id, title: T.milestone1, from: socStart, to: addDays(socStart, 50), description: T.milestone1d })
+  await saveMilestone({ planId: soc.id, title: T.milestone2, from: addDays(socStart, 60), to: addDays(socStart, 61), description: T.milestone2d })
 
   // ── An hours plan: English B2, 60 h at 1,5 h per day ──
   const engStart = addDays(today, -24)
   const eng = await createPlan({
-    name: 'Inglés B2',
+    name: T.eng,
     kind: 'amount',
-    unit: 'horas',
+    unit: T.horas,
     target: 60,
     startDate: engStart,
     deadline: addDays(engStart, 52),
@@ -121,7 +168,7 @@ export async function loadDemoData(today: ISODate = todayISO()): Promise<boolean
   }
 
   // ── Today's tasks (as if dictated) ──
-  await addTasksFromText(today, 'dentista a las 15 horas, comprar yerba, después llamar a Juan, pagar la luz')
+  await addTasksFromText(today, T.tasks)
 
   // ── Weight: ~0,5 kg/week down with daily noise; weigh-ins most days ──
   for (const [i, d] of days.entries()) {
@@ -135,10 +182,9 @@ export async function loadDemoData(today: ISODate = todayISO()): Promise<boolean
     for (const { meal, options } of MEALS) {
       if (d === today && (meal === 'merienda' || meal === 'cena')) continue
       if (meal === 'merienda' && chance(0.4)) continue
-      const text = options[Math.floor(r() * options.length)]
+      const [text, en] = options[Math.floor(r() * options.length)]
       const { kcal, items } = foodEntry(text)
-      if (kcal > 0) await addFood({ date: d, kcal, label: text, meal, items })
+      if (kcal > 0) await addFood({ date: d, kcal, label: lang === 'en' ? en : text, meal, items })
     }
   }
-  return true
 }

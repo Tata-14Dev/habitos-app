@@ -8,6 +8,7 @@
  */
 import { diffDays, maxISO, minISO, type ISODate } from './dates'
 import { countAvailableDays, isAvailableDay, nextAvailableDay, nthAvailableDay, type ScheduleConfig } from './schedule'
+import { fmtDecimal } from './numberFormat'
 
 export interface AmountLog {
   date: ISODate
@@ -96,6 +97,6 @@ export function computeAmountMetrics(
 
 /** "1,5 h" style: up to 2 decimals with a decimal comma, plus the unit. */
 export function formatAmount(n: number, unit?: string): string {
-  const num = String(round2(n)).replace('.', ',')
+  const num = fmtDecimal(round2(n))
   return unit ? `${num} ${unit}` : num
 }

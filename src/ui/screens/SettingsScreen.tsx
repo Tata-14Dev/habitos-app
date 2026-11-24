@@ -8,30 +8,32 @@ import { signIn, signOut, signUp, syncNow } from '../../data/sync'
 import { todayISO } from '../../domain/dates'
 import { Button, Card, cx, Field, inputCls, SectionTitle } from '../components'
 import { usePendingChanges, useSettings, useSyncState } from '../hooks'
+import { getLangPref, LANG, setLangPref, t, type LangPref } from '../i18n'
 import { getThemePref, setThemePref, type ThemePref } from '../theme'
 import { RemindersCard } from './RemindersCard'
 
 export function SettingsScreen() {
   const settings = useSettings()
   const [theme, setTheme] = useState<ThemePref>(getThemePref())
+  const lang = getLangPref()
   const [msg, setMsg] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   return (
     <div className="space-y-5">
-      <h1 className="pt-2 text-2xl font-semibold">Ajustes</h1>
+      <h1 className="pt-2 text-2xl font-semibold">{t('Ajustes')}</h1>
 
       <AccountCard />
       <RemindersCard />
 
       <Card>
-        <SectionTitle>Apariencia</SectionTitle>
+        <SectionTitle>{t('Apariencia')}</SectionTitle>
         <div className="grid grid-cols-3 gap-2">
           {(
             [
-              ['system', 'Automático'],
-              ['light', 'Claro'],
-              ['dark', 'Oscuro'],
+              ['system', t('Automático')],
+              ['light', t('Claro')],
+              ['dark', t('Oscuro')],
             ] as const
           ).map(([v, label]) => (
             <Button
@@ -46,8 +48,22 @@ export function SettingsScreen() {
             </Button>
           ))}
         </div>
+        <p className="mb-1 mt-4 text-sm text-ink-soft dark:text-neutral-400">{t('Idioma')}</p>
+        <div className="grid grid-cols-3 gap-2" role="group" aria-label={t('Idioma')}>
+          {(
+            [
+              ['system', t('Automático')],
+              ['es', 'Español'],
+              ['en', 'English'],
+            ] as [LangPref, string][]
+          ).map(([v, label]) => (
+            <Button key={v} variant={lang === v ? 'primary' : 'soft'} aria-pressed={lang === v} onClick={() => v !== lang && setLangPref(v)}>
+              {label}
+            </Button>
+          ))}
+        </div>
         <label className="mt-3 flex min-h-11 items-center justify-between gap-3">
-          <span>La semana empieza el lunes</span>
+          <span>{t('La semana empieza el lunes')}</span>
           <input
             type="checkbox"
             className="size-5 accent-progress"
@@ -58,11 +74,11 @@ export function SettingsScreen() {
       </Card>
 
       <Card>
-        <SectionTitle>Salud</SectionTitle>
+        <SectionTitle>{t('Salud')}</SectionTitle>
         <label className="flex min-h-11 items-center justify-between gap-3">
           <span>
-            Seguimiento de peso y calorías
-            <span className="block text-xs text-ink-soft dark:text-neutral-400">Suma la pestaña 🍎 Salud y un resumen en Hoy.</span>
+            {t('Seguimiento de peso y calorías')}
+            <span className="block text-xs text-ink-soft dark:text-neutral-400">{t('Suma la pestaña 🍎 Salud y un resumen en Hoy.')}</span>
           </span>
           <input
             type="checkbox"
@@ -74,15 +90,15 @@ export function SettingsScreen() {
       </Card>
 
       <Card>
-        <SectionTitle>Datos</SectionTitle>
+        <SectionTitle>{t('Datos')}</SectionTitle>
         <div className="space-y-2">
           {DEMO ? (
             <Button className="w-full" onClick={exitDemo}>
-              🧪 Salir del modo demo
+              {t('🧪 Salir del modo demo')}
             </Button>
           ) : (
             <Button className="w-full" onClick={enterDemo}>
-              🧪 Probar el modo demo (datos de ejemplo aparte)
+              {t('🧪 Probar el modo demo (datos de ejemplo aparte)')}
             </Button>
           )}
           <Button
@@ -92,10 +108,10 @@ export function SettingsScreen() {
               downloadFile(`habitos-${todayISO()}.json`, JSON.stringify(data, null, 2))
             }}
           >
-            ⬇️ Exportar respaldo (JSON)
+            {t('⬇️ Exportar respaldo (JSON)')}
           </Button>
           <Button className="w-full" onClick={() => fileRef.current?.click()}>
-            ⬆️ Importar respaldo
+            {t('⬆️ Importar respaldo')}
           </Button>
           <input
             ref={fileRef}
@@ -108,7 +124,7 @@ export function SettingsScreen() {
               if (!file) return
               try {
                 const n = await importBackup(JSON.parse(await file.text()))
-                setMsg(`✅ Se importaron ${n} registros.`)
+                setMsg(t('✅ Se importaron {n} registros.', { n }))
               } catch (err) {
                 setMsg(`⚠️ ${(err as Error).message}`)
               }
@@ -116,9 +132,11 @@ export function SettingsScreen() {
           />
           <Button
             className="w-full"
-            onClick={async () => setMsg((await loadExample()) ? '✅ Ejemplo cargado: plan SOC Level 1 con etapas y el hábito "Estudiar SOC".' : 'El ejemplo ya estaba cargado.')}
+            onClick={async () =>
+              setMsg((await loadExample()) ? t('✅ Ejemplo cargado: plan SOC Level 1 con etapas y el hábito "Estudiar SOC".') : t('El ejemplo ya estaba cargado.'))
+            }
           >
-            🧪 Cargar ejemplo
+            {t('🧪 Cargar ejemplo')}
           </Button>
           {msg && <p className="text-sm">{msg}</p>}
         </div>
@@ -139,10 +157,11 @@ function AccountCard() {
   if (!syncConfigured) {
     return (
       <Card>
-        <SectionTitle>Cuenta y sincronización</SectionTitle>
+        <SectionTitle>{t('Cuenta y sincronización')}</SectionTitle>
         <p className="text-sm text-ink-soft dark:text-neutral-400">
-          La sincronización no está configurada todavía (faltan las claves de Supabase en <code>.env.local</code>). Todo se
-          guarda en este dispositivo.
+          {DEMO
+            ? t('En el modo demo no hay cuenta ni sincronización: los datos de ejemplo viven solo en este navegador.')
+            : t('La sincronización no está configurada todavía (faltan las claves de Supabase en .env.local). Todo se guarda en este dispositivo.')}
         </p>
       </Card>
     )
@@ -150,36 +169,40 @@ function AccountCard() {
 
   if (sync.status !== 'signedOut') {
     const label: Record<string, string> = {
-      idle: '✅ Sincronizado',
-      syncing: '🔄 Sincronizando…',
-      offline: '📴 Sin conexión: se sube cuando vuelva internet',
-      error: `⚠️ Error: ${sync.error ?? ''}`,
+      idle: t('✅ Sincronizado'),
+      syncing: t('🔄 Sincronizando…'),
+      offline: t('📴 Sin conexión: se sube cuando vuelva internet'),
+      error: t('⚠️ Error: {msg}', { msg: sync.error ?? '' }),
     }
     return (
       <Card>
-        <SectionTitle>Cuenta y sincronización</SectionTitle>
+        <SectionTitle>{t('Cuenta y sincronización')}</SectionTitle>
         <p className="text-base">{sync.email}</p>
         <p className="mt-1 text-sm">
           {label[sync.status] ?? ''}
-          {sync.realtime && <span className="ml-2 text-xs text-ink-soft dark:text-neutral-400">⚡ en vivo</span>}
+          {sync.realtime && <span className="ml-2 text-xs text-ink-soft dark:text-neutral-400">{t('⚡ en vivo')}</span>}
         </p>
         <p className="text-xs text-ink-soft dark:text-neutral-400">
-          {pending > 0 ? `${pending} cambios sin subir · ` : ''}
-          {sync.lastSyncAt ? `Última vez: ${new Date(sync.lastSyncAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}` : ''}
+          {pending > 0 ? t('{n} cambios sin subir', { n: pending }) + ' · ' : ''}
+          {sync.lastSyncAt
+            ? t('Última vez: {time}', {
+                time: new Date(sync.lastSyncAt).toLocaleTimeString(LANG === 'en' ? 'en-US' : 'es-AR', { hour: '2-digit', minute: '2-digit' }),
+              })
+            : ''}
         </p>
         <div className="mt-3 flex gap-2">
           <Button className="flex-1" onClick={() => void syncNow()}>
-            Sincronizar ahora
+            {t('Sincronizar ahora')}
           </Button>
           <Button
             variant="ghost"
             onClick={async () => {
-              if (!confirm('¿Cerrar sesión? Se borra la copia local de este dispositivo (tus datos quedan en la nube).')) return
+              if (!confirm(t('¿Cerrar sesión? Se borra la copia local de este dispositivo (tus datos quedan en la nube).'))) return
               const err = await signOut()
               if (err) alert(err)
             }}
           >
-            Salir
+            {t('Salir')}
           </Button>
         </div>
       </Card>
@@ -188,17 +211,16 @@ function AccountCard() {
 
   return (
     <Card>
-      <SectionTitle>Cuenta y sincronización</SectionTitle>
+      <SectionTitle>{t('Cuenta y sincronización')}</SectionTitle>
       <p className="mb-3 text-sm text-ink-soft dark:text-neutral-400">
-        Entrá con la misma cuenta en el teléfono y en la compu para tener todo sincronizado. Solo la primera vez en cada
-        dispositivo, sin mails de confirmación.
+        {t('Entrá con la misma cuenta en el teléfono y en la compu para tener todo sincronizado. Solo la primera vez en cada dispositivo, sin mails de confirmación.')}
       </p>
       <div className="mb-3 grid grid-cols-2 gap-2">
         <Button variant={mode === 'in' ? 'primary' : 'soft'} onClick={() => setMode('in')}>
-          Iniciar sesión
+          {t('Iniciar sesión')}
         </Button>
         <Button variant={mode === 'up' ? 'primary' : 'soft'} onClick={() => setMode('up')}>
-          Crear cuenta
+          {t('Crear cuenta')}
         </Button>
       </div>
       <form
@@ -210,10 +232,10 @@ function AccountCard() {
           setBusy(false)
         }}
       >
-        <Field label="Mail">
+        <Field label={t('Mail')}>
           <input type="email" autoComplete="email" className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} required />
         </Field>
-        <Field label="Contraseña" hint={mode === 'up' ? 'Mínimo 6 caracteres. El iPhone te ofrece guardarla en el llavero.' : undefined}>
+        <Field label={t('Contraseña')} hint={mode === 'up' ? t('Mínimo 6 caracteres. El iPhone te ofrece guardarla en el llavero.') : undefined}>
           <input
             type="password"
             autoComplete={mode === 'in' ? 'current-password' : 'new-password'}
@@ -226,7 +248,7 @@ function AccountCard() {
         </Field>
         {error && <p className={cx('text-sm text-red-700 dark:text-red-300')}>{error}</p>}
         <Button type="submit" variant="primary" className="w-full" disabled={busy}>
-          {busy ? '…' : mode === 'in' ? 'Entrar' : 'Crear cuenta'}
+          {busy ? '…' : mode === 'in' ? t('Entrar') : t('Crear cuenta')}
         </Button>
       </form>
     </Card>

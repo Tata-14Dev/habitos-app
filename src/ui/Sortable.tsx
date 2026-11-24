@@ -11,6 +11,7 @@ import {
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { ReactNode } from 'react'
+import { t } from './i18n'
 
 /** Vertical list reorderable by dragging the ⠿ handle (mouse, touch or keyboard). */
 export function SortableList<T extends { id: string }>({
@@ -57,7 +58,7 @@ function Row({ id, children }: { id: string; children: (handle: ReactNode) => Re
       {...attributes}
       {...listeners}
       type="button"
-      aria-label="Arrastrar para reordenar"
+      aria-label={t('Arrastrar para reordenar')}
       className="grid h-11 w-8 shrink-0 cursor-grab touch-none place-items-center text-lg text-ink-soft active:cursor-grabbing"
     >
       ⠿

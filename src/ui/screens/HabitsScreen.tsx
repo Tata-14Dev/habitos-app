@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { formatAR, yearMonth } from '../../domain/dates'
+import { yearMonth } from '../../domain/dates'
 import {
   buildDoneLookup,
   habitStreaks,
@@ -15,10 +15,12 @@ import {
 import { deleteHabit, reorderHabits, saveHabit } from '../../data/repo'
 import type { Habit } from '../../data/types'
 import { Button, Card, cx, Empty, Field, inputCls, MoreOptions, SectionTitle, Sheet } from '../components'
-import { WEEKDAY_NAMES } from '../format'
+import { WEEKDAY_NAMES, fmtDate } from '../format'
 import { habitSummary, TIME_OF_DAY } from '../habitText'
 import { useAllHabitLogs, useHabits, useLinkedHabitDays, useSettings, useToday } from '../hooks'
 import { SortableList } from '../Sortable'
+import { fmtDecimal } from '../../domain/numberFormat'
+import { t } from '../i18n'
 
 export function HabitsScreen() {
   const today = useToday()
@@ -37,20 +39,20 @@ export function HabitsScreen() {
         <h1 className="text-2xl font-semibold">Hábitos</h1>
         <div className="flex gap-4 text-sm">
           <Link to={`/habitos/mes/${year}/${month}`} className="underline">
-            Ver mes 📅
+            {t('Ver mes 📅')}
           </Link>
           <Link to={`/habitos/anio/${year}`} className="underline">
-            Ver año 🗓️
+            {t('Ver año 🗓️')}
           </Link>
         </div>
       </header>
 
       <Card>
-        <SectionTitle right={<Button variant="primary" onClick={() => setEditing({ startDate: today })}>+ Nuevo</Button>}>
-          Mis hábitos
+        <SectionTitle right={<Button variant="primary" onClick={() => setEditing({ startDate: today })}>{t('+ Nuevo')}</Button>}>
+          {t('Mis hábitos')}
         </SectionTitle>
         {!habits?.length ? (
-          <Empty>Todavía no cargaste hábitos.</Empty>
+          <Empty>{t('Todavía no cargaste hábitos.')}</Empty>
         ) : (
           <SortableList
             items={habits}
@@ -60,7 +62,7 @@ export function HabitsScreen() {
               const weekly = isWeeklyGoal(h)
               const s = weekly ? weeklyStreaks(h, logs ?? [], today, weekStartsMonday) : habitStreaks(h, isDone, today)
               const active = isHabitActive(h, today)
-              const unit = weekly ? 'sem' : ''
+              const unit = weekly ? t('sem') : ''
               return (
                 <div className="flex items-center gap-2 py-2">
                   {handle}
@@ -71,9 +73,9 @@ export function HabitsScreen() {
                     </span>
                     <span className="block text-xs text-ink-soft dark:text-neutral-400">
                       {habitSummary(h)}
-                      {!isOneOff(h) && ` · desde ${formatAR(h.startDate, false)}`}
-                      {h.endDate ? ` hasta ${formatAR(h.endDate, false)}` : ''}
-                      {!active && ' · fuera de vigencia'}
+                      {!isOneOff(h) && ' · ' + t('desde {date}', { date: fmtDate(h.startDate, false) })}
+                      {h.endDate ? ' ' + t('hasta {date}', { date: fmtDate(h.endDate, false) }) : ''}
+                      {!active && ' · ' + t('fuera de vigencia')}
                     </span>
                   </button>
                   {!isOneOff(h) && (
@@ -81,7 +83,7 @@ export function HabitsScreen() {
                       🔥 {s.current}
                       {unit && ` ${unit}`}
                       <br />
-                      mejor {s.best}
+                      {t('mejor {n}', { n: s.best })}
                     </span>
                   )}
                 </div>
@@ -91,7 +93,7 @@ export function HabitsScreen() {
         )}
       </Card>
 
-      <Sheet open={!!editing} onClose={() => setEditing(null)} title={editing?.id ? 'Editar hábito' : 'Nuevo hábito'}>
+      <Sheet open={!!editing} onClose={() => setEditing(null)} title={editing?.id ? t('Editar hábito') : t('Nuevo hábito')}>
         {editing && <HabitForm habit={editing} onDone={() => setEditing(null)} />}
       </Sheet>
     </div>
@@ -99,13 +101,13 @@ export function HabitsScreen() {
 }
 
 const KINDS: [HabitKind, string, string][] = [
-  ['fixed', '🔁 Fijo', 'Todos los días'],
-  ['scheduled', '📅 Del día', 'Una fecha o algunos días'],
-  ['progress', '📈 Con progreso', 'Horas, páginas o veces'],
+  ['fixed', t('🔁 Fijo'), t('Todos los días')],
+  ['scheduled', t('📅 Del día'), t('Una fecha o algunos días')],
+  ['progress', t('📈 Con progreso'), t('Horas, páginas o veces')],
 ]
 
 const parseNum = (s: string) => Number(s.replace(',', '.'))
-const numText = (n: number | undefined) => (n === undefined ? '' : String(n).replace('.', ','))
+const numText = (n: number | undefined) => (n === undefined ? '' : fmtDecimal(n))
 
 /** Pill-style option group (aria-pressed buttons). */
 function Options<T extends string | undefined>({
@@ -202,7 +204,7 @@ function HabitForm({ habit, onDone }: { habit: Partial<Habit>; onDone: () => voi
       }}
     >
       <div>
-        <span className="mb-1 block text-sm text-ink-soft dark:text-neutral-400">Tipo de hábito</span>
+        <span className="mb-1 block text-sm text-ink-soft dark:text-neutral-400">{t('Tipo de hábito')}</span>
         <div className="grid grid-cols-3 gap-2">
           {KINDS.map(([k, label, hint]) => (
             <button
@@ -223,16 +225,16 @@ function HabitForm({ habit, onDone }: { habit: Partial<Habit>; onDone: () => voi
       </div>
 
       <div className="grid grid-cols-[4.5rem_1fr] gap-2">
-        <Field label="Emoji">
+        <Field label={t('Emoji')}>
           <input className={inputCls} value={emoji} onChange={(e) => setEmoji(e.target.value)} maxLength={4} placeholder="💪" />
         </Field>
-        <Field label="Nombre">
+        <Field label={t('Nombre')}>
           <input
             className={inputCls}
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoFocus
-            placeholder={kind === 'fixed' ? 'Hacer la cama' : kind === 'scheduled' ? 'Natación' : 'Estudiar inglés'}
+            placeholder={kind === 'fixed' ? t('Hacer la cama') : kind === 'scheduled' ? t('Natación') : t('Estudiar inglés')}
           />
         </Field>
       </div>
@@ -243,16 +245,16 @@ function HabitForm({ habit, onDone }: { habit: Partial<Habit>; onDone: () => voi
             value={when}
             onChange={setWhen}
             options={[
-              { value: 'weekdays', label: 'Algunos días de la semana' },
-              { value: 'date', label: 'Una sola fecha' },
+              { value: 'weekdays', label: t('Algunos días de la semana') },
+              { value: 'date', label: t('Una sola fecha') },
             ]}
           />
           {when === 'date' ? (
-            <Field label="Fecha">
+            <Field label={t('Fecha')}>
               <input type="date" className={inputCls} value={onDate} onChange={(e) => setOnDate(e.target.value)} />
             </Field>
           ) : (
-            <div className="grid grid-cols-7 gap-1" role="group" aria-label="Días de la semana">
+            <div className="grid grid-cols-7 gap-1" role="group" aria-label={t('Días de la semana')}>
               {[1, 2, 3, 4, 5, 6, 0].map((d) => (
                 <button
                   type="button"
@@ -279,31 +281,31 @@ function HabitForm({ habit, onDone }: { habit: Partial<Habit>; onDone: () => voi
             value={goalType}
             onChange={setGoalType}
             options={[
-              { value: 'amount', label: 'Una cantidad' },
-              { value: 'times', label: 'Veces por semana' },
+              { value: 'amount', label: t('Una cantidad') },
+              { value: 'times', label: t('Veces por semana') },
             ]}
           />
           {goalType === 'amount' ? (
             <>
               <div className="grid grid-cols-2 gap-2">
-                <Field label="Meta">
+                <Field label={t('Meta')}>
                   <input inputMode="decimal" className={inputCls} value={target} onChange={(e) => setTarget(e.target.value)} placeholder="1" />
                 </Field>
-                <Field label="Unidad">
-                  <input className={inputCls} value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="h, páginas, km" />
+                <Field label={t('Unidad')}>
+                  <input className={inputCls} value={unit} onChange={(e) => setUnit(e.target.value)} placeholder={t('h, páginas, km')} />
                 </Field>
               </div>
               <Options
                 value={period}
                 onChange={setPeriod}
                 options={[
-                  { value: 'day', label: 'Por día' },
-                  { value: 'week', label: 'Por semana' },
+                  { value: 'day', label: t('Por día') },
+                  { value: 'week', label: t('Por semana') },
                 ]}
               />
             </>
           ) : (
-            <Field label="Veces por semana" hint="Cada día que lo hacés lo tildás; la semana se cumple al llegar a la meta.">
+            <Field label={t('Veces por semana')} hint={t('Cada día que lo hacés lo tildás; la semana se cumple al llegar a la meta.')}>
               <input inputMode="numeric" className={inputCls} value={target} onChange={(e) => setTarget(e.target.value)} placeholder="3" />
             </Field>
           )}
@@ -312,47 +314,54 @@ function HabitForm({ habit, onDone }: { habit: Partial<Habit>; onDone: () => voi
 
       {kind !== 'progress' && (
         <div>
-          <span className="mb-1 block text-sm text-ink-soft dark:text-neutral-400">Momento del día</span>
+          <span className="mb-1 block text-sm text-ink-soft dark:text-neutral-400">{t('Momento del día')}</span>
           <Options
             value={timeOfDay}
             onChange={setTimeOfDay}
             cols={4}
-            options={TIME_OF_DAY.map((t) => ({ value: t.key, label: t.key ? t.label : 'Cualquiera' }))}
+            options={TIME_OF_DAY.map((x) => ({ value: x.key, label: x.key ? x.label : t('Cualquiera') }))}
           />
         </div>
       )}
 
       {!oneOff && (
-        <MoreOptions summary="Vigencia" hint={`Desde ${startDate ? formatAR(startDate) : '—'}${endDate ? ` hasta ${formatAR(endDate)}` : ', sin fecha de fin'}`}>
+        <MoreOptions
+          summary={t('Vigencia')}
+          hint={
+            endDate
+              ? t('Desde {from} hasta {to}', { from: startDate ? fmtDate(startDate) : '—', to: fmtDate(endDate) })
+              : t('Desde {from}, sin fecha de fin', { from: startDate ? fmtDate(startDate) : '—' })
+          }
+        >
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Desde">
+            <Field label={t('Desde')}>
               <input type="date" className={inputCls} value={startDate} onChange={(e) => setStart(e.target.value)} />
             </Field>
-            <Field label="Hasta (opcional)">
+            <Field label={t('Hasta (opcional)')}>
               <input type="date" className={inputCls} value={endDate} onChange={(e) => setEnd(e.target.value)} />
             </Field>
           </div>
           <p className="text-xs text-ink-soft dark:text-neutral-400">
-            Si dejás un hábito, poné la fecha "hasta" en vez de borrarlo: los meses anteriores conservan sus datos.
+            {t('Si dejás un hábito, poné la fecha "hasta" en vez de borrarlo: los meses anteriores conservan sus datos.')}
           </p>
         </MoreOptions>
       )}
 
       <div className="flex gap-2 pt-2">
         <Button type="submit" variant="primary" className="flex-1" disabled={!valid}>
-          Guardar
+          {t('Guardar')}
         </Button>
         {habit.id && (
           <Button
             type="button"
             variant="danger"
             onClick={() => {
-              if (confirm('¿Borrar el hábito y su historial? Si solo lo dejaste, mejor ponele fecha "hasta".')) {
+              if (confirm(t('¿Borrar el hábito y su historial? Si solo lo dejaste, mejor ponele fecha "hasta".'))) {
                 void deleteHabit(habit.id!).then(onDone)
               }
             }}
           >
-            Borrar
+            {t('Borrar')}
           </Button>
         )}
       </div>

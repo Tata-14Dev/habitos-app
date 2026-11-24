@@ -161,6 +161,8 @@ export interface Settings extends SyncFields {
   /** 'HH:MM' local time of the morning reminder. */
   reminderTime: string
   timeZone: string
+  /** Color theme (see src/ui/palette.ts). Missing = "Neón". */
+  palette?: { preset: 'neon' | 'clasico' | 'oceano' | 'lavanda' | 'custom'; primary?: string; accent?: string; base?: string }
   /** Sunday-night push with the week's summary. Missing = on if the morning reminder is on. */
   weeklySummary?: boolean
   /** Optional weight & calorie tracking ("Salud" tab). */

@@ -36,7 +36,7 @@ export function HabitsScreen() {
   return (
     <div className="space-y-5">
       <header className="flex items-end justify-between pt-2">
-        <h1 className="text-2xl font-semibold">Hábitos</h1>
+        <h1 className="text-2xl font-semibold text-brand">{t('Hábitos')}</h1>
         <div className="flex gap-4 text-sm">
           <Link to={`/habitos/mes/${year}/${month}`} className="underline">
             {t('Ver mes 📅')}

@@ -93,7 +93,7 @@ export function RemindersCard() {
           </span>
           <input
             type="checkbox"
-            className="size-5 accent-progress"
+            className="size-5 accent-primary"
             checked={settings.weeklySummary ?? settings.reminderEnabled}
             onChange={(e) => void updateSettings({ weeklySummary: e.target.checked })}
           />

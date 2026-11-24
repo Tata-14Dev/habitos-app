@@ -20,7 +20,7 @@ export function PlansScreen() {
   return (
     <div className="space-y-5">
       <header className="flex items-end justify-between pt-2">
-        <h1 className="text-2xl font-semibold">{t('Planes')}</h1>
+        <h1 className="text-2xl font-semibold text-brand">{t('Planes')}</h1>
         <Button variant="primary" onClick={() => setCreating(true)}>
           {t('+ Nuevo')}
         </Button>

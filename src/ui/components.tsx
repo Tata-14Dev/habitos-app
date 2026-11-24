@@ -28,7 +28,7 @@ export function Button({ variant = 'soft', className, ...props }: BtnProps) {
       {...props}
       className={cx(
         'min-h-11 rounded-xl px-4 py-2 text-base font-medium transition active:scale-[0.98] disabled:opacity-50',
-        variant === 'primary' && 'bg-progress text-white dark:text-neutral-900',
+        variant === 'primary' && 'bg-primary text-white dark:text-neutral-900',
         variant === 'soft' && 'bg-paper text-ink dark:bg-neutral-700 dark:text-neutral-100',
         variant === 'ghost' && 'text-ink-soft dark:text-neutral-300',
         variant === 'danger' && 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300',
@@ -50,7 +50,7 @@ export function Check({ checked, onChange, label }: { checked: boolean; onChange
       className={cx(
         'grid size-11 shrink-0 place-items-center rounded-xl border-2 text-xl transition active:scale-95',
         checked
-          ? 'border-progress bg-progress text-white dark:text-neutral-900'
+          ? 'border-primary bg-primary text-white dark:text-neutral-900'
           : 'border-line bg-white dark:border-neutral-600 dark:bg-neutral-800',
       )}
     >
@@ -60,7 +60,7 @@ export function Check({ checked, onChange, label }: { checked: boolean; onChange
 }
 
 /** Thin progress bar. `value` in [0, 1] or null. */
-export function ProgressBar({ value, color = 'bg-progress' }: { value: number | null; color?: string }) {
+export function ProgressBar({ value, color = 'bg-gradient-to-r from-primary to-accent' }: { value: number | null; color?: string }) {
   const pct = value === null ? 0 : Math.max(0, Math.min(1, value)) * 100
   return (
     <div className="h-1.5 w-full overflow-hidden rounded-full bg-line dark:bg-neutral-700">
@@ -97,7 +97,7 @@ export function Field({ label, children, hint }: { label: string; children: Reac
 }
 
 export const inputCls =
-  'w-full min-h-11 rounded-xl border border-line bg-white px-3 py-2 text-base text-ink outline-none focus:border-progress dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100'
+  'w-full min-h-11 rounded-xl border border-line bg-white px-3 py-2 text-base text-ink outline-none focus:border-primary dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100'
 
 /** Collapsible group for secondary fields ("Más opciones"). Native <details>: accessible, no state. */
 export function MoreOptions({ children, summary = t('Más opciones'), hint }: { children: ReactNode; summary?: string; hint?: string }) {

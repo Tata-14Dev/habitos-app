@@ -10,6 +10,7 @@ import { Button, Card, cx, Field, inputCls, SectionTitle } from '../components'
 import { usePendingChanges, useSettings, useSyncState } from '../hooks'
 import { getLangPref, LANG, setLangPref, t, type LangPref } from '../i18n'
 import { getThemePref, setThemePref, type ThemePref } from '../theme'
+import { ColorsCard } from './ColorsCard'
 import { RemindersCard } from './RemindersCard'
 
 export function SettingsScreen() {
@@ -21,9 +22,10 @@ export function SettingsScreen() {
 
   return (
     <div className="space-y-5">
-      <h1 className="pt-2 text-2xl font-semibold">{t('Ajustes')}</h1>
+      <h1 className="pt-2 text-2xl font-semibold text-brand">{t('Ajustes')}</h1>
 
       <AccountCard />
+      <ColorsCard />
       <RemindersCard />
 
       <Card>
@@ -66,7 +68,7 @@ export function SettingsScreen() {
           <span>{t('La semana empieza el lunes')}</span>
           <input
             type="checkbox"
-            className="size-5 accent-progress"
+            className="size-5 accent-primary"
             checked={settings.weekStartsMonday}
             onChange={(e) => void updateSettings({ weekStartsMonday: e.target.checked })}
           />
@@ -82,7 +84,7 @@ export function SettingsScreen() {
           </span>
           <input
             type="checkbox"
-            className="size-5 accent-progress"
+            className="size-5 accent-primary"
             checked={!!settings.healthEnabled}
             onChange={(e) => void updateSettings({ healthEnabled: e.target.checked })}
           />

@@ -54,7 +54,7 @@ export function PlanDetailScreen() {
     <div className="space-y-5">
       <header className="flex items-start justify-between gap-2 pt-2">
         <div>
-          <h1 className="text-2xl font-semibold">{plan.name}</h1>
+          <h1 className="text-2xl font-semibold text-brand">{plan.name}</h1>
           <p className="text-sm text-ink-soft dark:text-neutral-400">
             {fmtDate(plan.startDate, false)} → {fmtDate(plan.deadline)} · {t('ritmo {n} por día', { n: formatAmount(plan.pace) })}
           </p>
@@ -478,7 +478,7 @@ function Milestones({ planId, today }: { planId: string; today: ISODate }) {
                 <Check checked={m.done} label={m.title} onChange={(v) => void saveMilestone({ ...m, done: v })} />
                 <button className="flex-1 text-left" onClick={() => setEditing(m)}>
                   <span className={cx('block', m.done && 'text-ink-soft dark:text-neutral-400 line-through')}>
-                    {m.title} {current && !m.done && <span className="ml-1 rounded bg-progress/30 px-1.5 text-xs">{t('ahora')}</span>}
+                    {m.title} {current && !m.done && <span className="ml-1 rounded bg-primary/30 px-1.5 text-xs">{t('ahora')}</span>}
                   </span>
                   <span className="block text-xs text-ink-soft dark:text-neutral-400">
                     {m.from === m.to ? fmtDate(m.from) : `${fmtDate(m.from)} → ${fmtDate(m.to)}`}

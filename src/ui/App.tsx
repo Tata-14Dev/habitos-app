@@ -1,4 +1,5 @@
-import { lazy, Suspense, type ComponentType } from 'react'
+import { lazy, Suspense, useEffect, type ComponentType } from 'react'
+import { setPalette, type PaletteChoice } from './palette'
 import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom'
 import { cx } from './components'
 import { DEMO, exitDemo } from '../data/demoFlag'
@@ -28,7 +29,11 @@ const TABS = [
 const HEALTH_TAB = { to: '/salud', label: t('Salud'), icon: '🍎', end: false }
 
 export default function App() {
-  const { healthEnabled } = useSettings()
+  const { healthEnabled, palette } = useSettings()
+  // The palette is a synced setting: apply it when it arrives (or changes on another device).
+  useEffect(() => {
+    if (palette) setPalette(palette as PaletteChoice)
+  }, [palette])
   const tabs = healthEnabled ? [...TABS.slice(0, 3), HEALTH_TAB, TABS[3]] : TABS
   return (
     <BrowserRouter>
@@ -59,7 +64,7 @@ export default function App() {
                 className={({ isActive }) =>
                   cx(
                     'flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs',
-                    isActive ? 'font-semibold text-ink dark:text-neutral-100' : 'text-ink-soft dark:text-neutral-400',
+                    isActive ? 'font-semibold text-primary' : 'text-ink-soft dark:text-neutral-400',
                   )
                 }
               >
@@ -77,9 +82,9 @@ export default function App() {
 /** Sticky notice while browsing sample data. */
 function DemoBanner() {
   return (
-    <div className="sticky top-0 z-30 -mx-4 mb-2 flex items-center justify-between gap-2 bg-amber-100 px-4 py-2 text-sm text-amber-950 dark:bg-amber-900 dark:text-amber-50">
+    <div className="sticky top-0 z-30 -mx-4 mb-2 flex items-center justify-between gap-2 border-b border-accent/40 bg-white/90 px-4 py-2 text-sm text-ink backdrop-blur dark:bg-neutral-900/90 dark:text-neutral-100">
       <span>{t('🧪 Modo demo: datos de ejemplo, no se guardan en ninguna cuenta.')}</span>
-      <button className="shrink-0 rounded-lg bg-white/70 px-3 py-1 font-medium dark:bg-black/30" onClick={exitDemo}>
+      <button className="shrink-0 rounded-lg bg-accent px-3 py-1 font-medium text-white dark:text-neutral-900" onClick={exitDemo}>
         {t('Salir')}
       </button>
     </div>

@@ -49,7 +49,7 @@ export function MonthScreen() {
           ‹
         </Link>
         <div className="text-center">
-          <h1 className="text-xl font-semibold capitalize">{monthLabel(year, month)}</h1>
+          <h1 className="text-xl font-semibold capitalize text-brand">{monthLabel(year, month)}</h1>
           <p className="text-sm text-ink-soft dark:text-neutral-400">
             {t('Mes: {pct}', { pct: formatPct(stats.total) })} ·{' '}
             <Link to={`/habitos/anio/${year}`} className="underline">
@@ -112,7 +112,7 @@ export function MonthScreen() {
                               }}
                               className={cx(
                                 'size-7 rounded-md border text-[10px]',
-                                done ? 'border-progress bg-progress text-white dark:text-neutral-900' : 'border-line bg-paper dark:border-neutral-600 dark:bg-neutral-700',
+                                done ? 'border-primary bg-primary text-white dark:text-neutral-900' : 'border-line bg-paper dark:border-neutral-600 dark:bg-neutral-700',
                                 d.future && 'opacity-40',
                               )}
                             >
@@ -125,7 +125,7 @@ export function MonthScreen() {
                               onClick={() => void setHabitDone(h.id, d.date, !done)}
                               className={cx(
                                 'size-7 rounded-md border',
-                                done ? 'border-progress bg-progress' : 'border-line bg-paper dark:border-neutral-600 dark:bg-neutral-700',
+                                done ? 'border-primary bg-primary' : 'border-line bg-paper dark:border-neutral-600 dark:bg-neutral-700',
                                 d.future && 'opacity-40',
                               )}
                             />
@@ -171,7 +171,7 @@ export function MonthScreen() {
       <Card>
         <SectionTitle>{t('Progreso diario')}</SectionTitle>
         <AreaTrend
-          kind="progress"
+          kind="primary"
           max={1}
           format={(v) => `${Math.round(v * 100)}%`}
           data={stats.days.map((d) => ({ label: String(Number(d.date.slice(8))), value: d.future ? null : d.ratio.pct }))}
@@ -181,7 +181,7 @@ export function MonthScreen() {
       <Card>
         <SectionTitle>{t('Estado mental')}</SectionTitle>
         <AreaTrend
-          kind="mood"
+          kind="accent"
           max={10}
           format={(v) => fmtFixed(v, 1)}
           data={stats.days.map((d) => ({ label: String(Number(d.date.slice(8))), value: mentalState(moodByDate.get(d.date)) }))}

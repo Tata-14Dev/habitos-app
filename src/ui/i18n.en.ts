@@ -451,4 +451,12 @@ export const EN: Record<string, string> = {
   'Estudiar {name}': 'Study {name}',
   // PlanDetailScreen.tsx (header)
   'ritmo {n} por día': 'pace {n} per day',
+  // ColorsCard.tsx
+  'Colores': 'Colors',
+  '{name} (poco contraste con el principal)': '{name} (too close to the primary)',
+  '🎨 Personalizado': '🎨 Custom',
+  'Color principal': 'Primary color',
+  'Color de acento': 'Accent color',
+  'Fondo': 'Background',
+  'Los acentos deshabilitados se confunden con el principal para personas con daltonismo o en los gráficos.': 'Disabled accents are too close to the primary for color-blind people or in charts.',
 }

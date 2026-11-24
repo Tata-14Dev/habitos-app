@@ -46,12 +46,12 @@ export function TodayScreen() {
     <div className="space-y-5">
       <header className="pt-2">
         <p className="text-sm text-ink-soft first-letter:uppercase dark:text-neutral-400">{longDay(today)}</p>
-        <h1 className="text-2xl font-semibold">{t('Tu día')}</h1>
+        <h1 className="text-2xl font-semibold text-brand">{t('Tu día')}</h1>
         <p className="mt-1 text-ink-soft dark:text-neutral-400">{briefingLine(pendingTasks, dueToday.length - ratio.done)}</p>
       </header>
 
       {!DEMO && habits?.length === 0 && plans?.length === 0 && (
-        <Card className="border-2 border-dashed border-progress/60">
+        <Card className="border-2 border-dashed border-primary/60">
           <p className="font-medium">{t('¿Primera vez?')}</p>
           <p className="mt-1 text-sm text-ink-soft dark:text-neutral-400">
             {t('Mirá la app con seis semanas de datos de ejemplo: hábitos, un curso a mitad de camino, gráficos y salud. No toca tus datos.')}
@@ -123,9 +123,9 @@ export function TodayScreen() {
           {t('Ánimo y motivación')}
         </SectionTitle>
         <p className="mb-1 text-sm">{t('Ánimo')}</p>
-        <Scale value={mood?.mood} color="bg-mood" onChange={(v) => void setMood(today, { mood: v })} />
+        <Scale value={mood?.mood} color="bg-accent" onChange={(v) => void setMood(today, { mood: v })} />
         <p className="mb-1 mt-3 text-sm">{t('Motivación')}</p>
-        <Scale value={mood?.motivation} color="bg-progress" onChange={(v) => void setMood(today, { motivation: v })} />
+        <Scale value={mood?.motivation} color="bg-primary" onChange={(v) => void setMood(today, { motivation: v })} />
       </Card>
     </div>
   )

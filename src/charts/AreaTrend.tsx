@@ -1,14 +1,10 @@
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { useIsDark } from '../ui/theme'
+import { useChartColors } from '../ui/palette'
 
 /**
  * Single-series area chart (no legend: the card title names it).
- * Brand fills (#93C47D / #D5A6BD) with a darker stroke in light mode for ≥3:1 contrast.
+ * Colors come from the active theme: `primary` or `accent` (validated in palette.data.ts).
  */
-const PALETTE = {
-  progress: { light: { stroke: '#38761D', fill: '#93C47D' }, dark: { stroke: '#93C47D', fill: '#93C47D' } },
-  mood: { light: { stroke: '#A64D79', fill: '#D5A6BD' }, dark: { stroke: '#D5A6BD', fill: '#D5A6BD' } },
-} as const
 
 export interface TrendPoint {
   label: string
@@ -23,15 +19,14 @@ export function AreaTrend({
   height = 160,
 }: {
   data: TrendPoint[]
-  kind: keyof typeof PALETTE
+  kind: 'primary' | 'accent'
   max: number
   format: (v: number) => string
   height?: number
 }) {
-  const dark = useIsDark()
-  const c = PALETTE[kind][dark ? 'dark' : 'light']
-  const ink = dark ? '#a3a3a3' : '#666666'
-  const grid = dark ? '#404040' : '#EFEFEF'
+  const pal = useChartColors()
+  const c = { stroke: pal[kind], fill: pal[kind] }
+  const { ink, grid } = pal
   return (
     <div style={{ height }} className="w-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -46,8 +41,8 @@ export function AreaTrend({
             contentStyle={{
               borderRadius: 12,
               border: 'none',
-              background: dark ? '#262626' : '#ffffff',
-              color: dark ? '#e5e5e5' : '#434343',
+              background: pal.surface,
+              color: pal.text,
               boxShadow: '0 2px 8px rgba(0,0,0,.15)',
             }}
             labelStyle={{ color: ink }}
@@ -58,11 +53,11 @@ export function AreaTrend({
             stroke={c.stroke}
             strokeWidth={2}
             fill={c.fill}
-            fillOpacity={0.35}
+            fillOpacity={0.22}
             connectNulls={false}
             isAnimationActive={false}
-            dot={{ r: 3, fill: c.stroke, stroke: dark ? "#262626" : "#ffffff", strokeWidth: 1 }}
-            activeDot={{ r: 4, stroke: dark ? '#262626' : '#ffffff', strokeWidth: 2 }}
+            dot={{ r: 3, fill: c.stroke, stroke: pal.surface, strokeWidth: 1 }}
+            activeDot={{ r: 4, stroke: pal.surface, strokeWidth: 2 }}
           />
         </AreaChart>
       </ResponsiveContainer>

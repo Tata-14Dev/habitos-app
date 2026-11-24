@@ -1,7 +1,7 @@
 /**
  * Yearly overview: % per month (chart) and a "year in pixels" — twelve mini calendars where
  * each day's shade is the share of its due habits that got done.
- * Sequential ramps validated with the dataviz script (--ordinal), light and dark.
+ * The shade ramp comes from the theme primary (validated with --ordinal in palette.data.ts).
  */
 import { useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -11,13 +11,9 @@ import { buildDoneLookup, formatPct, monthStats, rangeRatio, type MonthStats } f
 import { Card, cx, SectionTitle } from '../components'
 import { fmtDate, monthLabel } from '../format'
 import { useHabitLogs, useHabits, useLinkedHabitDays, useSettings, useToday } from '../hooks'
-import { useIsDark } from '../theme'
+import { useChartColors } from '../palette'
 import { t } from '../i18n'
 
-const RAMP = {
-  light: ['#88C16E', '#6FAE53', '#558F3B', '#3D7027', '#285217'],
-  dark: ['#3A5A2B', '#4F7D3A', '#67A34C', '#86BF6B', '#A9D893'],
-}
 const BINS = ['1–24%', '25–49%', '50–74%', '75–99%', '100%']
 
 /** Ramp step for a day's %: 0 → none (a miss), (0, 25) → 0 … 100% → 4. */
@@ -26,7 +22,7 @@ function step(pct: number): number {
   return Math.min(3, Math.floor(pct * 4))
 }
 
-function MiniMonth({ stats, mondayFirst, ramp, today }: { stats: MonthStats; mondayFirst: boolean; ramp: string[]; today: ISODate }) {
+function MiniMonth({ stats, mondayFirst, ramp, today }: { stats: MonthStats; mondayFirst: boolean; ramp: readonly string[]; today: ISODate }) {
   const offset = (weekday(stats.days[0].date) - (mondayFirst ? 1 : 0) + 7) % 7
   return (
     <Link to={`/habitos/mes/${stats.year}/${stats.month}`} className="block rounded-xl bg-paper p-3 dark:bg-neutral-900">
@@ -70,7 +66,7 @@ export function YearScreen() {
   const logs = useHabitLogs(from, to)
   const linkedDays = useLinkedHabitDays()
   const { weekStartsMonday } = useSettings()
-  const ramp = RAMP[useIsDark() ? 'dark' : 'light']
+  const ramp = useChartColors().ramp
 
   const isDone = useMemo(() => buildDoneLookup(logs ?? [], linkedDays ?? {}, habits ?? []), [logs, linkedDays, habits])
   const months = useMemo(
@@ -87,7 +83,7 @@ export function YearScreen() {
           ‹
         </Link>
         <div className="text-center">
-          <h1 className="text-xl font-semibold">{year}</h1>
+          <h1 className="text-xl font-semibold text-brand">{year}</h1>
           <p className="text-sm text-ink-soft dark:text-neutral-400">{t('Año: {pct}', { pct: formatPct(total) })}</p>
         </div>
         <Link to={`/habitos/anio/${year + 1}`} className="grid size-11 place-items-center rounded-xl bg-white text-xl dark:bg-neutral-800" aria-label={t('Año siguiente')}>
@@ -97,7 +93,7 @@ export function YearScreen() {
 
       <Card>
         <SectionTitle>{t('Por mes')}</SectionTitle>
-        <AreaTrend data={trend} kind="progress" max={1} format={(v) => `${Math.round(v * 100)}%`} />
+        <AreaTrend data={trend} kind="primary" max={1} format={(v) => `${Math.round(v * 100)}%`} />
       </Card>
 
       <Card>

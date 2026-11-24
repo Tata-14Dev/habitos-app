@@ -230,7 +230,7 @@ export function PlanForm({
         <input inputMode="decimal" className={inputCls} value={pace} onChange={(e) => setPace(e.target.value)} />
       </Field>
 
-      <div className="rounded-xl bg-progress/15 p-3 text-sm dark:bg-progress/10" aria-live="polite">
+      <div className="rounded-xl bg-primary/15 p-3 text-sm dark:bg-primary/10" aria-live="polite">
         {customDeadline ? (
           <>
             <span className="block">
@@ -324,7 +324,7 @@ export function PlanForm({
         )}
         {!editing && (
           <label className="flex min-h-11 items-center gap-3">
-            <input type="checkbox" className="size-5 shrink-0 accent-progress" checked={withHabit} onChange={(e) => setWithHabit(e.target.checked)} />
+            <input type="checkbox" className="size-5 shrink-0 accent-primary" checked={withHabit} onChange={(e) => setWithHabit(e.target.checked)} />
             <span className="text-sm">
               {isAmount
                 ? t('Crear el hábito "Estudiar {name}" (se marca solo cuando registrás avance)', { name: name || '…' })

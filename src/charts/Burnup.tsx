@@ -1,11 +1,11 @@
 /**
  * Burn-up: cumulative work per day. Real (solid green) and its projection (same green, dashed:
  * the same entity continued); the original plan is a neutral dashed reference, like the total.
- * Green steps validated with the dataviz palette script (light #38761D, dark #67A34C).
+ * Real/projection use the theme primary (validated in palette.data.ts).
  */
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { BurnupPoint } from '../domain/burnup'
-import { useIsDark } from '../ui/theme'
+import { useChartColors } from '../ui/palette'
 import { fmtDate } from '../ui/format'
 import { t } from '../ui/i18n'
 import { fmtDecimal } from '../domain/numberFormat'
@@ -13,11 +13,9 @@ import { fmtDecimal } from '../domain/numberFormat'
 const NAMES: Record<string, string> = { real: t('Real'), projection: t('Proyección'), plan: t('Plan original') }
 
 export function BurnupChart({ data, total, unit, height = 200 }: { data: BurnupPoint[]; total: number; unit?: string; height?: number }) {
-  const dark = useIsDark()
-  const green = dark ? '#67A34C' : '#38761D'
-  const ink = dark ? '#a3a3a3' : '#666666'
-  const grid = dark ? '#404040' : '#EFEFEF'
-  const surface = dark ? '#262626' : '#ffffff'
+  const pal = useChartColors()
+  const green = pal.primary
+  const { ink, grid, surface } = pal
   const rows = data.map((p) => ({ ...p, label: fmtDate(p.date, false) }))
   const fmt = (v: number) => fmtDecimal(Math.round(v * 10) / 10)
   return (
@@ -46,7 +44,7 @@ export function BurnupChart({ data, total, unit, height = 200 }: { data: BurnupP
             <Tooltip
               cursor={{ stroke: ink, strokeDasharray: '3 3' }}
               formatter={(v, name) => [typeof v === 'number' ? `${fmt(v)}${unit ? ` ${unit}` : ''}` : '—', NAMES[String(name)] ?? String(name)]}
-              contentStyle={{ borderRadius: 12, border: 'none', background: surface, color: dark ? '#e5e5e5' : '#434343', boxShadow: '0 2px 8px rgba(0,0,0,.15)' }}
+              contentStyle={{ borderRadius: 12, border: 'none', background: surface, color: pal.text, boxShadow: '0 2px 8px rgba(0,0,0,.15)' }}
               labelStyle={{ color: ink }}
             />
             <Line type="linear" dataKey="plan" stroke={ink} strokeWidth={2} strokeDasharray="5 4" dot={false} isAnimationActive={false} />

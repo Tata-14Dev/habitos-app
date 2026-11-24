@@ -100,7 +100,7 @@ export function HealthScreen() {
   return (
     <div className="space-y-5">
       <header className="flex items-end justify-between pt-2">
-        <h1 className="text-2xl font-semibold">{t('Salud')}</h1>
+        <h1 className="text-2xl font-semibold text-brand">{t('Salud')}</h1>
         <Button onClick={() => setGoals(true)}>{t('Objetivos')}</Button>
       </header>
 
@@ -108,7 +108,7 @@ export function HealthScreen() {
         <SectionTitle right={<span className="text-sm font-semibold">{formatKcal(eaten)}{target ? ` / ${formatKcal(target)}` : ''} kcal</span>}>
           {t('Calorías de hoy')}
         </SectionTitle>
-        {target ? <ProgressBar value={eaten / target} color={eaten > target ? 'bg-mood' : 'bg-progress'} /> : null}
+        {target ? <ProgressBar value={eaten / target} color={eaten > target ? 'bg-accent' : 'bg-primary'} /> : null}
         {remainingLine(eaten, target) && <p className="mt-2 text-sm">{remainingLine(eaten, target)}</p>}
         <div className="mt-3">
           <MealForm today={today} />
@@ -216,7 +216,7 @@ export function HealthTodayCard({ today }: { today: ISODate }) {
         </span>
         <span>⚖️ {todayWeight ? `${formatKg(todayWeight.kg)} kg` : t('Sin pesaje hoy')}</span>
       </div>
-      {target ? <ProgressBar value={eaten / target} color={eaten > target ? 'bg-mood' : 'bg-progress'} /> : null}
+      {target ? <ProgressBar value={eaten / target} color={eaten > target ? 'bg-accent' : 'bg-primary'} /> : null}
       <div className="mt-3">
         <QuickFoodForm today={today} />
       </div>

@@ -70,6 +70,7 @@ test('flujo básico: ejemplo, plan, ítems, hábitos y dictado', async ({ page }
   })
   await expect(page.getByText(/Terminás el/)).toContainText(expectedEnd)
   await page.getByRole('button', { name: 'Crear plan' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Curso rápido', exact: true })).toBeVisible()
   await expect(page.getByText('0/34')).toBeVisible()
   await expect(page.getByText('Room 34', { exact: true })).toBeVisible()
 
@@ -88,6 +89,7 @@ test('flujo básico: ejemplo, plan, ítems, hábitos y dictado', async ({ page }
   })
   await expect(page.getByText(/Terminás el/)).toContainText(end31)
   await page.getByRole('button', { name: 'Crear plan' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'SOC real', exact: true })).toBeVisible() // on the plan page, not the list
   await expect(page.getByText('31/62')).toBeVisible()
   await expect(page.getByText('Vas por:')).toContainText('Room 32')
   await expect(page.getByText('31 hechos antes del plan')).toBeVisible()

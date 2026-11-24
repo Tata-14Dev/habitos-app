@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { compareISO, formatAR, type ISODate } from '../../domain/dates'
-import { marginLabel, numberedItems, numberingOf, situationLabel } from '../../domain/plans'
+import { itemsBurnup } from '../../domain/burnup'
+import { BurnupChart } from '../../charts/Burnup'
+import { marginLabel, numberedItems, numberingOf, situationLabel, toScheduleConfig, toScheduleItems } from '../../domain/plans'
 import { formatAmount } from '../../domain/progress'
 import type { PlanMetrics } from '../../domain/schedule'
 import {
@@ -65,6 +67,7 @@ export function PlanDetailScreen() {
       ) : (
         <>
       <Dashboard plan={plan} model={model} items={items} today={today} />
+      <ItemsBurnup plan={plan} model={model} items={items} today={today} />
 
       <Card>
         <SectionTitle right={<Button onClick={() => setPasting(true)}>+ Ítems</Button>}>Ítems</SectionTitle>
@@ -169,6 +172,19 @@ export function PlanDetailScreen() {
         {editItem && <ItemForm item={editItem} onDone={() => setEditItem(null)} />}
       </Sheet>
     </div>
+  )
+}
+
+/** Burn-up of the items in the plan (items done before the plan are left out). */
+function ItemsBurnup({ plan, model, items, today }: { plan: Plan; model: PlanModel; items: PlanItem[]; today: ISODate }) {
+  const sItems = toScheduleItems(items)
+  if (!model.projection.ok || sItems.length < 2) return null
+  const data = itemsBurnup(sItems, plan.baseline, model.projection.value, toScheduleConfig(plan), today)
+  return (
+    <Card>
+      <SectionTitle>Avance</SectionTitle>
+      <BurnupChart data={data} total={sItems.length} unit={plan.unit} />
+    </Card>
   )
 }
 

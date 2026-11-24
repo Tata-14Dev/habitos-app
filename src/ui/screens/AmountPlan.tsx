@@ -4,6 +4,9 @@ import { Link } from 'react-router-dom'
 import { formatAR, type ISODate } from '../../domain/dates'
 import { marginLabel } from '../../domain/plans'
 import { formatAmount, type AmountPlanMetrics } from '../../domain/progress'
+import { amountBurnup } from '../../domain/burnup'
+import { toScheduleConfig } from '../../domain/plans'
+import { BurnupChart } from '../../charts/Burnup'
 import { addToPlanLog, setPlanLog } from '../../data/repo'
 import type { Plan, PlanLog } from '../../data/types'
 import { Button, Card, cx, Empty, Field, inputCls, ProgressBar, SectionTitle, Sheet } from '../components'
@@ -123,6 +126,12 @@ export function AmountDashboard({ plan, logs, today }: { plan: Plan; logs: PlanL
               sub={`Tu ritmo: ${formatAmount(plan.pace, plan.unit)}/día`}
             />
           </dl>
+          {target > 0 && (
+            <div className="mt-5">
+              <p className="mb-2 text-sm font-medium">Avance</p>
+              <BurnupChart data={amountBurnup(target, logs, toScheduleConfig(plan), today)} total={target} unit={plan.unit} />
+            </div>
+          )}
         </>
       )}
     </Card>

@@ -20,7 +20,13 @@ test('modo demo: datos de ejemplo en una base aparte', async ({ page }) => {
   await page.getByRole('link', { name: /Planes/ }).click()
   await page.getByText('SOC Level 1 · TryHackMe', { exact: true }).click()
   await expect(page.getByText('20 hechos antes del plan')).toBeVisible()
+  await expect(page.getByText('Avance', { exact: true })).toBeVisible()
+  await page.getByText('Avance', { exact: true }).locator('xpath=ancestor::section[1]').screenshot({ path: 'test-results/demo-burnup.png' })
   await page.screenshot({ path: 'test-results/demo-plan.png', fullPage: true })
+  await page.getByRole('link', { name: /Planes/ }).click()
+  await page.getByText('Inglés B2', { exact: true }).click()
+  await expect(page.getByText('Avance', { exact: true })).toBeVisible()
+  await page.getByText('Avance', { exact: true }).locator('xpath=ancestor::section[1]').screenshot({ path: 'test-results/demo-burnup-horas.png' })
 
   // Month grid and health have history
   await page.getByRole('link', { name: /Hábitos/ }).click()

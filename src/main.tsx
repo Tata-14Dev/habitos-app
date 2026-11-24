@@ -10,14 +10,26 @@ import { initTheme } from './ui/theme'
 
 initTheme()
 startSync()
-if (DEMO) void import('./data/demo').then((m) => m.loadDemoData(undefined, LANG))
 registerSW({ immediate: true })
 
 // Ask the browser not to evict our IndexedDB data under storage pressure.
 void navigator.storage?.persist?.()
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+function render() {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  )
+}
+
+// Demo mode: fill the sample database first (one transaction, a few hundred ms) so the first
+// paint already has the data instead of an empty screen that then jumps.
+if (DEMO) {
+  void import('./data/demo')
+    .then((m) => m.loadDemoData(undefined, LANG))
+    .catch(() => undefined)
+    .finally(render)
+} else {
+  render()
+}

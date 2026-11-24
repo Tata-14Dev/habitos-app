@@ -161,6 +161,8 @@ export interface Settings extends SyncFields {
   /** 'HH:MM' local time of the morning reminder. */
   reminderTime: string
   timeZone: string
+  /** Sunday-night push with the week's summary. Missing = on if the morning reminder is on. */
+  weeklySummary?: boolean
   /** Optional weight & calorie tracking ("Salud" tab). */
   healthEnabled?: boolean
   /** kcal per day. */

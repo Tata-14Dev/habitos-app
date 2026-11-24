@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { amountDueToday, buildReminder, dueDate, habitDueOn, localNow } from './reminder'
+import { amountDueToday, buildReminder, buildWeeklySummary, dueDate, habitDueOn, localNow, weeklyDueDate } from './reminder'
 
 const BA = 'America/Argentina/Buenos_Aires' // UTC−3
 
@@ -101,5 +101,65 @@ describe('habit types in the reminder', () => {
       ],
     })
     expect(r.body).toBe('✅ 1 hábito para hoy')
+  })
+})
+
+describe('weekly summary', () => {
+  // 2026-11-22 is a Sunday; 20:05 in Buenos Aires = 23:05 UTC.
+  const sunday2005 = new Date('2026-11-22T23:05:00Z')
+  it('goes out on Sundays from 20:00, once, for people with reminders on', () => {
+    expect(weeklyDueDate(sunday2005, { reminderEnabled: true, timeZone: BA }, undefined)).toBe('2026-11-22')
+    expect(weeklyDueDate(sunday2005, { reminderEnabled: true, timeZone: BA }, '2026-11-22')).toBeNull()
+    expect(weeklyDueDate(new Date('2026-11-21T23:05:00Z'), { reminderEnabled: true, timeZone: BA }, undefined)).toBeNull() // Saturday
+    expect(weeklyDueDate(new Date('2026-11-22T22:30:00Z'), { reminderEnabled: true, timeZone: BA }, undefined)).toBeNull() // 19:30
+  })
+  it('can be turned off, or on without the morning reminder', () => {
+    expect(weeklyDueDate(sunday2005, { reminderEnabled: true, weeklySummary: false, timeZone: BA }, undefined)).toBeNull()
+    expect(weeklyDueDate(sunday2005, { reminderEnabled: false, weeklySummary: true, timeZone: BA }, undefined)).toBe('2026-11-22')
+    expect(weeklyDueDate(sunday2005, { timeZone: BA }, undefined)).toBeNull()
+  })
+
+  const days = (from: number, to: number, month = 11) => Array.from({ length: to - from + 1 }, (_, i) => `2026-${month}-${String(from + i).padStart(2, '0')}`)
+  it('habits % vs last week, plan progress and weight', () => {
+    const r = buildWeeklySummary('2026-11-22', {
+      tasks: [],
+      projections: [],
+      habits: [{ id: 'cama', name: 'Cama', startDate: '2026-11-01' }],
+      habitLogs: [
+        ...days(16, 21).map((date) => ({ habitId: 'cama', date, done: true })), // 6 of 7 this week
+        ...days(9, 15).slice(0, 5).map((date) => ({ habitId: 'cama', date, done: true })), // 5 of 7 last week
+      ],
+      plans: [
+        { id: 'soc', name: 'SOC', kind: 'items' },
+        { id: 'eng', name: 'Inglés', kind: 'amount', unit: 'horas' },
+      ],
+      planItems: [
+        { id: 'r1', planId: 'soc', title: 'Room 1', done: true, prior: true, order: 0 },
+        { id: 'r2', planId: 'soc', title: 'Room 2', done: true, doneDate: '2026-11-17', order: 1 },
+        { id: 'r3', planId: 'soc', title: 'Room 3', done: true, doneDate: '2026-11-20', order: 2 },
+        { id: 'r4', planId: 'soc', title: 'Room 4', done: false, order: 3 },
+      ],
+      planLogs: [
+        { planId: 'eng', date: '2026-11-17', amount: 1.5 },
+        { planId: 'eng', date: '2026-11-19', amount: 2 },
+        { planId: 'eng', date: '2026-11-10', amount: 9 }, // last week: not counted
+      ],
+      bodyWeights: [
+        { date: '2026-11-10', kg: 80 },
+        { date: '2026-11-12', kg: 80.2 },
+        { date: '2026-11-18', kg: 79.7 },
+        { date: '2026-11-21', kg: 79.7 },
+      ],
+    })
+    expect(r.title).toBe('Tu semana 📊')
+    expect(r.body.split('\n')).toEqual([
+      '✅ Hábitos: 86% (la anterior: 71%) ↑',
+      '📚 SOC: 2 esta semana · vas por Room 4',
+      '📚 Inglés: 3,5 horas esta semana',
+      '⚖️ Peso: −0,4 kg vs la semana anterior',
+    ])
+  })
+  it('a quiet week still gets a message', () => {
+    expect(buildWeeklySummary('2026-11-22', { tasks: [], habits: [], plans: [], planItems: [], projections: [], habitLogs: [] }).body).toMatch(/Semana tranquila/)
   })
 })

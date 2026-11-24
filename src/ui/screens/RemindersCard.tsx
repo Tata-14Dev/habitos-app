@@ -84,6 +84,20 @@ export function RemindersCard() {
           )}
         </div>
       )}
+      {signedIn && support.ok && (
+        <label className="mt-3 flex min-h-11 items-center justify-between gap-3 border-t border-line pt-3 dark:border-neutral-700">
+          <span>
+            Resumen semanal
+            <span className="block text-xs text-ink-soft dark:text-neutral-400">Los domingos a las 20: hábitos, planes y peso de la semana.</span>
+          </span>
+          <input
+            type="checkbox"
+            className="size-5 accent-progress"
+            checked={settings.weeklySummary ?? settings.reminderEnabled}
+            onChange={(e) => void updateSettings({ weeklySummary: e.target.checked })}
+          />
+        </label>
+      )}
       {msg && <p className="mt-2 text-sm">{msg}</p>}
       {isIOS() && <p className="mt-2 text-xs text-ink-soft">Requiere iOS 16.4 o posterior.</p>}
     </Card>

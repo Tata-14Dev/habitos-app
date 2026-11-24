@@ -57,7 +57,7 @@ export interface ReminderData {
     kind?: 'fixed' | 'scheduled' | 'progress'
     onDate?: ISODate
     weekdays?: number[]
-    goal?: { type: 'amount'; period: 'day' | 'week' } | { type: 'times' }
+    goal?: { type: 'amount'; period: 'day' | 'week'; target?: number; unit?: string } | { type: 'times'; target?: number }
   })[]
   plans: (Alive & {
     id: string
@@ -70,7 +70,7 @@ export interface ReminderData {
     restWeekdays?: number[]
     blockedDates?: ISODate[]
   })[]
-  planItems: (Alive & { id: string; planId: string; title: string; done: boolean })[]
+  planItems: (Alive & { id: string; planId: string; title: string; done: boolean; order?: number; doneDate?: ISODate; prior?: boolean })[]
   projections: (Alive & { planId: string; dates: Record<string, ISODate> })[]
   /** Amount plans: progress per day. Optional so older callers keep working. */
   planLogs?: (Alive & { planId: string; date: ISODate; amount: number })[]
@@ -137,4 +137,98 @@ export function buildReminder(date: ISODate, d: ReminderData): { title: string; 
     title: 'Buen día ☀️',
     body: lines.length ? lines.join('\n') : 'Hoy no tenés nada cargado. ¿Dictás tu día?',
   }
+}
+
+// ─── Weekly summary (Sundays) ───────────────────────────────────────────────
+
+/** Local time the weekly summary goes out on Sundays. */
+export const WEEKLY_TIME = '20:00'
+
+function addDaysISO(date: ISODate, n: number): ISODate {
+  const [y, m, d] = date.split('-').map(Number)
+  const t = new Date(Date.UTC(y, m - 1, d + n))
+  return t.toISOString().slice(0, 10)
+}
+
+/**
+ * Due on Sundays within [20:00, 21:00) local time, once per Sunday. On by default for anyone
+ * who turned the morning reminder on; `weeklySummary: false` turns it off.
+ */
+export function weeklyDueDate(
+  now: Date,
+  settings: { reminderEnabled?: boolean; weeklySummary?: boolean; timeZone?: string },
+  lastWeeklyDate: ISODate | undefined,
+): ISODate | null {
+  const on = settings.weeklySummary ?? settings.reminderEnabled ?? false
+  if (!on) return null
+  const { date, time } = localNow(now, settings.timeZone || 'America/Argentina/Buenos_Aires')
+  if (weekdayOf(date) !== 0 || lastWeeklyDate === date) return null
+  const delta = toMin(time) - toMin(WEEKLY_TIME)
+  return delta >= 0 && delta < SEND_WINDOW_MIN ? date : null
+}
+
+export interface WeeklyData extends ReminderData {
+  habitLogs: (Alive & { habitId: string; date: ISODate; done: boolean; amount?: number })[]
+  bodyWeights?: (Alive & { date: ISODate; kg: number })[]
+}
+
+const fmt1 = (n: number) => String(Math.round(n * 10) / 10).replace('.', ',')
+
+/** % of due habits done over [from, to] (same rule as the app's daily percentage). */
+function habitsPct(d: WeeklyData, from: ISODate, to: ISODate): number | null {
+  const habits = d.habits.filter((h) => !h.deletedAt)
+  const logs = new Map(d.habitLogs.filter((l) => !l.deletedAt).map((l) => [`${l.habitId}|${l.date}`, l]))
+  let due = 0
+  let done = 0
+  for (let day = from; day <= to; day = addDaysISO(day, 1)) {
+    for (const h of habits) {
+      if (!habitDueOn(h, day)) continue
+      due++
+      const log = logs.get(`${h.id}|${day}`)
+      const target = h.goal?.type === 'amount' && h.goal.period === 'day' ? h.goal.target : undefined
+      if (log && (target !== undefined ? (log.amount ?? 0) >= target : log.done)) done++
+    }
+  }
+  return due ? Math.round((done / due) * 100) : null
+}
+
+/** "Tu semana 📊": habits % vs last week, progress per plan, weight change. `date` is the Sunday. */
+export function buildWeeklySummary(date: ISODate, d: WeeklyData): { title: string; body: string } {
+  const from = addDaysISO(date, -6)
+  const prevFrom = addDaysISO(date, -13)
+  const prevTo = addDaysISO(date, -7)
+  const lines: string[] = []
+
+  const pct = habitsPct(d, from, date)
+  const prev = habitsPct(d, prevFrom, prevTo)
+  if (pct !== null) {
+    const arrow = prev === null ? '' : pct > prev ? ' ↑' : pct < prev ? ' ↓' : ''
+    lines.push(`✅ Hábitos: ${pct}%${prev !== null ? ` (la anterior: ${prev}%)${arrow}` : ''}`)
+  }
+
+  for (const plan of d.plans.filter((p) => !p.deletedAt)) {
+    if (plan.kind === 'amount') {
+      const sum = (d.planLogs ?? []).filter((l) => !l.deletedAt && l.planId === plan.id && l.date >= from && l.date <= date).reduce((s, l) => s + l.amount, 0)
+      if (sum > 0) lines.push(`📚 ${plan.name}: ${fmt1(sum)}${plan.unit ? ` ${plan.unit}` : ''} esta semana`)
+      continue
+    }
+    const items = d.planItems.filter((i) => !i.deletedAt && i.planId === plan.id)
+    const n = items.filter((i) => i.done && !i.prior && i.doneDate && i.doneDate >= from && i.doneDate <= date).length
+    const cur = [...items].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).find((i) => !i.done)
+    if (n > 0 || cur) lines.push(`📚 ${plan.name}: ${n} esta semana${cur ? ` · vas por ${cur.title}` : ' · ¡terminado!'}`)
+  }
+
+  const w = (d.bodyWeights ?? []).filter((x) => !x.deletedAt)
+  const avg = (a: ISODate, b: ISODate) => {
+    const xs = w.filter((x) => x.date >= a && x.date <= b)
+    return xs.length ? xs.reduce((s, x) => s + x.kg, 0) / xs.length : null
+  }
+  const wNow = avg(from, date)
+  const wPrev = avg(prevFrom, prevTo)
+  if (wNow !== null && wPrev !== null) {
+    const diff = Math.round((wNow - wPrev) * 10) / 10
+    lines.push(`⚖️ Peso: ${diff > 0 ? '+' : diff < 0 ? '−' : '±'}${fmt1(Math.abs(diff))} kg vs la semana anterior`)
+  }
+
+  return { title: 'Tu semana 📊', body: lines.length ? lines.join('\n') : 'Semana tranquila. ¿Arrancamos la próxima con todo?' }
 }

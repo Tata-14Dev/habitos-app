@@ -11,7 +11,8 @@
     "test": "node scripts/vitest.mjs run",
     "test:watch": "node scripts/vitest.mjs",
     "e2e": "playwright test",
-    "vapid": "node scripts/vapid.mjs"
+    "vapid": "node scripts/vapid.mjs",
+    "test:rls": "supabase db query --remote --yes -f supabase/tests/rls.sql"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

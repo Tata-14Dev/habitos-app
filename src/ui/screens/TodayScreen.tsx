@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { addDays, weekStart } from '../../domain/dates'
 import { buildDoneLookup, dayRatio, formatPct, isHabitScheduled, isWeeklyGoal, mentalState } from '../../domain/habits'
@@ -12,8 +12,10 @@ import { useDayMoods, useHabitLogs, useHabits, usePlanItems, usePlans, useSettin
 import { usePlanModel } from '../usePlanModel'
 import { AmountToday } from './AmountPlan'
 import { TodayHabitList, WeeklyGoalList } from './HabitWidgets'
-import { CurrentLine } from './PlanDetailScreen'
-import { HealthTodayCard } from './HealthScreen'
+import { CurrentLine } from './CurrentLine'
+
+// Only loaded when health tracking is on (it pulls the food dictionary and charts).
+const HealthTodayCard = lazy(() => import('./HealthScreen').then((m) => ({ default: m.HealthTodayCard })))
 
 export function TodayScreen() {
   const today = useToday()
@@ -87,7 +89,11 @@ export function TodayScreen() {
         </Card>
       )}
 
-      {healthEnabled && <HealthTodayCard today={today} />}
+      {healthEnabled && (
+        <Suspense fallback={null}>
+          <HealthTodayCard today={today} />
+        </Suspense>
+      )}
 
       {(plans ?? []).map((p) =>
         p.kind === 'amount' ? <AmountToday key={p.id} plan={p} today={today} /> : <PlanToday key={p.id} plan={p} today={today} />,

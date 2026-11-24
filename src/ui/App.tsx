@@ -1,13 +1,19 @@
+import { lazy, Suspense, type ComponentType } from 'react'
 import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom'
 import { cx } from './components'
 import { useSettings, useSyncState } from './hooks'
-import { HealthScreen } from './screens/HealthScreen'
-import { HabitsScreen } from './screens/HabitsScreen'
-import { MonthScreen } from './screens/MonthScreen'
-import { PlanDetailScreen } from './screens/PlanDetailScreen'
-import { PlansScreen } from './screens/PlansScreen'
-import { SettingsScreen } from './screens/SettingsScreen'
 import { TodayScreen } from './screens/TodayScreen'
+
+// "Hoy" ships in the main bundle; every other screen (and Recharts, the food dictionary…) is
+// loaded on first visit. The service worker precaches all chunks, so offline still works.
+const named = <K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K) =>
+  lazy(() => load().then((m) => ({ default: m[name] })))
+const HabitsScreen = named(() => import('./screens/HabitsScreen'), 'HabitsScreen')
+const MonthScreen = named(() => import('./screens/MonthScreen'), 'MonthScreen')
+const PlansScreen = named(() => import('./screens/PlansScreen'), 'PlansScreen')
+const PlanDetailScreen = named(() => import('./screens/PlanDetailScreen'), 'PlanDetailScreen')
+const HealthScreen = named(() => import('./screens/HealthScreen'), 'HealthScreen')
+const SettingsScreen = named(() => import('./screens/SettingsScreen'), 'SettingsScreen')
 
 const TABS = [
   { to: '/', label: 'Hoy', icon: '☀️', end: true },
@@ -25,6 +31,7 @@ export default function App() {
     <BrowserRouter>
       <div className="mx-auto min-h-dvh max-w-xl px-4 pb-28 pt-[max(0.5rem,env(safe-area-inset-top))]">
         <SyncBadge />
+        <Suspense fallback={<p className="py-16 text-center text-ink-soft">Cargando…</p>}>
         <Routes>
           <Route path="/" element={<TodayScreen />} />
           <Route path="/habitos" element={<HabitsScreen />} />
@@ -35,6 +42,7 @@ export default function App() {
           <Route path="/ajustes" element={<SettingsScreen />} />
           <Route path="*" element={<TodayScreen />} />
         </Routes>
+        </Suspense>
       </div>
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur dark:border-neutral-700 dark:bg-neutral-900/95">
         <ul className={cx('mx-auto grid max-w-xl', tabs.length === 5 ? 'grid-cols-5' : 'grid-cols-4')}>

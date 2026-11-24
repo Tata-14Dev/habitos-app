@@ -9,7 +9,7 @@ import { Button, Card, Empty, ProgressBar, SectionTitle, Sheet } from '../compon
 import { usePlanItems, usePlans, useToday } from '../hooks'
 import { usePlanModel } from '../usePlanModel'
 import { AmountSummary } from './AmountPlan'
-import { CurrentLine } from './PlanDetailScreen'
+import { CurrentLine } from './CurrentLine'
 import { PlanForm } from './PlanForm'
 
 export function PlansScreen() {

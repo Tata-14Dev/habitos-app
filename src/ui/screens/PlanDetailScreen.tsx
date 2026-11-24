@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { compareISO, formatAR, type ISODate } from '../../domain/dates'
-import { currentItem, marginLabel, numberedItems, numberingOf, situationLabel } from '../../domain/plans'
+import { marginLabel, numberedItems, numberingOf, situationLabel } from '../../domain/plans'
 import { formatAmount } from '../../domain/progress'
 import type { PlanMetrics } from '../../domain/schedule'
 import {
@@ -23,6 +23,7 @@ import { useMilestones, usePlan, usePlanItems, usePlanLogs, useToday } from '../
 import { SortableList } from '../Sortable'
 import { usePlanModel, type PlanModel } from '../usePlanModel'
 import { AmountDashboard, LogHistory } from './AmountPlan'
+import { CurrentLine } from './CurrentLine'
 import { PlanForm } from './PlanForm'
 
 export function PlanDetailScreen() {
@@ -329,17 +330,6 @@ function ItemForm({ item, onDone }: { item: PlanItem; onDone: () => void }) {
         </Button>
       </div>
     </form>
-  )
-}
-
-/** "Vas por: Room 32" (first pending item), or nothing when the plan is done. */
-export function CurrentLine({ items }: { items: PlanItem[] }) {
-  const cur = currentItem(items)
-  if (!cur) return null
-  return (
-    <p className="mt-2 text-sm">
-      📍 Vas por: <strong>{cur.title}</strong>
-    </p>
   )
 }
 

@@ -54,6 +54,8 @@ flowchart LR
 
 ### Decisiones interesantes
 
+El detalle completo (protocolo de sincronización, modelo de seguridad, reglas de reprogramación y compromisos asumidos) está en [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), en inglés.
+
 - **Local-first con outbox.** La UI nunca habla con la red. Cada escritura marca `updatedAt` y suma el registro a un outbox, en la misma transacción de Dexie. El motor de sync vacía el outbox en lotes: después de cada cambio (con debounce), al abrir la app, cuando vuelve la conexión, cuando la app vuelve al frente y una vez por minuto mientras está visible.
 - **Una sola tabla genérica en el servidor.** Cada colección local se guarda como filas de `records(user_id, collection, id, data jsonb, updated_at, deleted_at, server_ts)`. Sumar una colección nueva no necesita migración.
 - **"Gana el último cambio", aplicado en SQL.** `push_records()` hace un solo `INSERT … ON CONFLICT DO UPDATE … WHERE excluded.updated_at > r.updated_at`, así que el servidor rechaza las escrituras viejas. Los timestamps del cliente son estrictamente crecientes, por lo que dos escrituras en el mismo milisegundo nunca empatan.

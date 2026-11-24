@@ -38,6 +38,10 @@ export function TodayScreen() {
   const sortedTasks = sortTasks(tasks ?? [])
   const pendingTasks = sortedTasks.filter((task) => !task.done).length
 
+  // Wait for the first local reads (a few ms) so cards don't render empty and then grow,
+  // pushing the rest of the page down (layout shift).
+  if (habits === undefined || plans === undefined || tasks === undefined || logs === undefined) return null
+
   return (
     <div className="space-y-5">
       <header className="pt-2">
@@ -105,7 +109,7 @@ export function TodayScreen() {
       )}
 
       {healthEnabled && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<div className="h-48 rounded-2xl bg-white shadow-sm dark:bg-neutral-800" aria-hidden />}>
           <HealthTodayCard today={today} />
         </Suspense>
       )}

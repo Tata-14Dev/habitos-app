@@ -2,14 +2,63 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-@theme {
-  --color-paper: #efefef;
-  --color-line: #d9d9d9;
-  --color-ink: #434343;
-  --color-ink-soft: #666666;
-  --color-progress: #93c47d;
-  --color-progress-light: #90ee90;
-  --color-mood: #d5a6bd;
+/*
+ * Colors come from the active palette (src/ui/palette.ts), written as --c-* variables on <html>.
+ * The defaults below are the "Neón" theme, so the very first paint already matches it.
+ * Tailwind's neutral scale is remapped too: the "night" base tints dark mode indigo.
+ */
+:root {
+  --c-primary: #D13781;
+  --c-accent: #0E7F97;
+  --c-paper: #F1EEF7;
+  --c-line: #DBD6E5;
+  --c-ink: #353246;
+  --c-ink-soft: #5A586E;
+  --c-n-50: #FAFAFD;
+  --c-n-100: #F4F4FE;
+  --c-n-200: #E3E4F3;
+  --c-n-300: #D2D3E2;
+  --c-n-400: #9F9FAE;
+  --c-n-500: #727280;
+  --c-n-600: #51515E;
+  --c-n-700: #3E3E52;
+  --c-n-800: #242437;
+  --c-n-900: #161526;
+  --c-n-950: #090818;
+}
+
+.dark {
+  --c-primary: #FE8FBA;
+  --c-accent: #49C9EA;
+}
+
+@theme inline {
+  --color-primary: var(--c-primary);
+  --color-accent: var(--c-accent);
+  --color-paper: var(--c-paper);
+  --color-line: var(--c-line);
+  --color-ink: var(--c-ink);
+  --color-ink-soft: var(--c-ink-soft);
+  --color-neutral-50: var(--c-n-50);
+  --color-neutral-100: var(--c-n-100);
+  --color-neutral-200: var(--c-n-200);
+  --color-neutral-300: var(--c-n-300);
+  --color-neutral-400: var(--c-n-400);
+  --color-neutral-500: var(--c-n-500);
+  --color-neutral-600: var(--c-n-600);
+  --color-neutral-700: var(--c-n-700);
+  --color-neutral-800: var(--c-n-800);
+  --color-neutral-900: var(--c-n-900);
+  --color-neutral-950: var(--c-n-950);
+}
+
+/* Brand gradient (primary → accent) for screen titles. Both ends clear 4.5:1 on the page. */
+@utility text-brand {
+  background-image: linear-gradient(90deg, var(--c-primary), var(--c-accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  width: fit-content;
 }
 
 html, body, #root { min-height: 100%; }

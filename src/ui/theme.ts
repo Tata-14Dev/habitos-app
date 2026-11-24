@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { applyPalette } from './palette'
 
 export type ThemePref = 'system' | 'light' | 'dark'
 const KEY = 'theme'
@@ -29,7 +30,7 @@ export function applyTheme() {
   const p = getThemePref()
   const dark = p === 'dark' || (p === 'system' && !!media?.matches)
   document.documentElement.classList.toggle('dark', dark)
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#171717' : '#EFEFEF')
+  applyPalette(dark)
 }
 
 export function initTheme() {

@@ -7,11 +7,19 @@
 > **Live demo:** [open it with sample data](https://habitos-app-vtve.vercel.app/?demo=1) — six weeks of habits, a course halfway through, charts and health, in a separate local database (no account needed). The UI switches to English or Spanish with your device. · 🇦🇷 [Leer en español](README.es.md)
 
 <p align="center">
+  <img src="docs/screenshots/demo.gif" width="300" alt="Demo: ticking a habit, dictating tasks, a study plan rescheduling itself with its burn-up chart, the year in pixels and the health tab">
+</p>
+
+<p align="center">
   <img src="docs/screenshots/today.png" width="210" alt="Today screen: dictated tasks parsed into a list">
   <img src="docs/screenshots/habits.png" width="210" alt="Habits with current and best streaks">
   <img src="docs/screenshots/month.png" width="210" alt="Monthly habit grid">
   <img src="docs/screenshots/charts.png" width="210" alt="Per-habit percentages and daily progress chart">
 </p>
+
+| Lighthouse (mobile, production) | Performance | Accessibility | Best practices | SEO |
+|---|---|---|---|---|
+| [habitos-app-vtve.vercel.app](https://habitos-app-vtve.vercel.app/?demo=1) | 92 | 100 | 100 | 100 |
 
 ## Why I built it
 
@@ -25,10 +33,12 @@ I used to track habits and study plans in spreadsheets. They were fine on a lapt
 - **Fair percentages and streaks.** A habit only counts on days it's due and within its start/end dates, so adding, retiring, or rescheduling a habit never distorts past percentages. Daily streaks skip the days a habit isn't due; weekly goals keep streaks in weeks. Monthly grid and trend charts included.
 - **Study plans that reschedule themselves.** Two kinds: **item plans** (a list of rooms, lessons, or chapters, pasted one per line with optional `Module: item`) and **amount plans** (a total of hours, pages, or exercises, logged per day). Just say how many ("34 rooms") and the daily pace: the end date is computed for you, skipping rest weekdays and blocked dates (or set your own deadline). Already halfway through a course? Say "62 in total, done up to 31": rooms 1–31 count as done before the plan, the schedule starts at room 32, and the app shows "You're on: Room 32". Every check-off recalculates the projected finish date, how far ahead or behind you are, and the pace you need. A plan can be linked to a habit that is marked done on any day you make progress.
 - **Offline-first PWA.** The whole app is precached by a Workbox service worker. Every write goes to IndexedDB first, so the app never waits on the network.
-- **Multi-device sync.** Email and password auth with Supabase, plus last-write-wins conflict resolution.
-- **Morning push reminder.** Web Push to the installed iOS PWA, scheduled with `pg_cron` and sent by a Supabase Edge Function in each user's local time zone.
+- **Multi-device sync, live.** Email and password auth with Supabase and last-write-wins conflict resolution. Changes made on one device show up on the others in under a second (Supabase Realtime), with polling as a fallback.
+- **Push notifications.** A morning reminder with the day's tasks, plan items and habits, and a Sunday-night weekly summary (habits % vs. last week, progress per plan, weight change). Web Push to the installed iOS PWA, scheduled with `pg_cron` and sent by a Supabase Edge Function in each user's local time zone.
+- **Burn-up and yearly view.** Each plan charts its original plan, actual progress and projection. A yearly view shows the % per month and a "year in pixels" of every day.
 - **Optional weight & calorie tracking.** Turned on in Settings. Log meals by typing what you ate (`200 g arroz, 2 huevos, 1 taza de leche`): the app looks each food up in a built-in dictionary of ~300 Argentine foods (approximate values) plus your own "Mis alimentos" and computes the kcal, with a live preview; plain kcal still works. See [docs/COMIDAS.md](docs/COMIDAS.md). Track that against a daily target and one weigh-in a day. Because daily weight is noisy, the app shows a 7-day trend, a weekly rate from a least-squares fit over the last 4 weeks, and the date you'd reach your goal weight at that rate.
 - **Spanish and English.** The UI follows the device language (or a setting): texts, dates and number formats. Voice dictation and meal parsing understand Spanish, since they're built around Argentine phrasing and foods. A unit test fails if any UI string lacks a translation.
+- **Demo mode.** [`?demo=1`](https://habitos-app-vtve.vercel.app/?demo=1) opens six weeks of sample data in a separate local database, with sync turned off, so you can explore everything without an account.
 - **Backup.** Export and import of all data as JSON.
 
 ## Architecture
@@ -83,7 +93,8 @@ The engine was specified **test-first**: 57 Vitest tests and a design guide with
 | Backend | Supabase: Postgres, Auth, RLS, Edge Functions (Deno), `pg_cron` |
 | PWA | `vite-plugin-pwa` (injectManifest), Workbox, Web Push (VAPID) |
 | Charts and UI | Recharts, dnd-kit (drag-to-reorder) |
-| Testing | Vitest + `fake-indexeddb` (domain, store, sync), Playwright (end-to-end on an emulated iPhone) |
+| Testing | Vitest + `fake-indexeddb` (domain, store, sync, i18n coverage), Playwright (end-to-end on an emulated iPhone, in Spanish and English), SQL RLS checks |
+| CI | GitHub Actions: lint, types, unit tests, build and e2e on every push |
 | Hosting | Vercel |
 
 ## Project structure
@@ -106,6 +117,7 @@ npm run dev          # http://localhost:5173 (works without any keys: local-only
 npm test             # Vitest
 npm run e2e          # Playwright (emulated iPhone 13)
 npm run build        # production build with service worker
+npm run test:rls     # Row Level Security checks against the linked Supabase project (rolled back)
 ```
 
 To enable sync and push, copy `.env.example` to `.env.local` and fill in your Supabase URL, publishable key, and VAPID public key. The full guide covers the Supabase setup, migrations, the Edge Function, cron, the Vercel deploy, and installing on an iPhone. It's in Spanish: [`docs/SETUP.md`](docs/SETUP.md).
@@ -118,10 +130,9 @@ I built this with an AI pair programmer (Claude Code) under an explicit working 
 
 ## Roadmap
 
-- Burn-up chart per plan (baseline vs. actual vs. projection)
-- Yearly overview (`yearStats` is already implemented and tested)
 - CSV export
-- Realtime sync with Supabase Realtime instead of polling
+- Push notifications in English (they're Spanish-only today)
+- Meal parsing in English
 
 More ideas are in [`IDEAS.md`](IDEAS.md).
 

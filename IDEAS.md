@@ -13,3 +13,5 @@
 - **Salud, más adelante:** macros (proteínas, carbohidratos y grasas) en el diccionario, lector de código de barras, IMC con la altura, recordatorio para pesarse.
 - **Comidas escritas, mejoras posibles:** separar por «con» de forma inteligente («milanesa con puré» sin romper «café con leche»); ignorar verbos del dictado («comí», «almorcé»); números en palabras más allá de diez y «un cuarto (kilo)», «docena», «puñado», «lata», «copa» como unidades; dictado con IA para frases libres; mostrar «ml» en el detalle guardado de las bebidas (hoy el detalle dice «g», con 1 ml ≈ 1 g); sugerir el alimento más usado o repetir una comida de otro día; editar una comida ya cargada.
 - **Recordatorio de hábitos por momento del día:** un aviso a la mañana, otro a la tarde y otro a la noche, cada uno con los hábitos de ese momento.
+- **Notificaciones push en inglés:** hoy el recordatorio y el resumen semanal salen en español (los arma el servidor). Habría que guardar el idioma en Ajustes y elegir los textos en la Edge Function.
+- **Comidas en inglés:** el diccionario y el separador entienden comidas y frases en español.

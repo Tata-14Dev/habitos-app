@@ -7,11 +7,19 @@
 > **Demo:** [abrila con datos de ejemplo](https://habitos-app-vtve.vercel.app/?demo=1): seis semanas de hábitos, un curso a mitad de camino, gráficos y salud, en una base local aparte (sin cuenta) · 🇬🇧 [Read in English](README.md)
 
 <p align="center">
+  <img src="docs/screenshots/demo.gif" width="300" alt="Demo: tildar un hábito, dictar tareas, un plan de estudio que se reprograma con su burn-up, el año en píxeles y la pestaña de salud">
+</p>
+
+<p align="center">
   <img src="docs/screenshots/today.png" width="210" alt="Pantalla Hoy: tareas dictadas separadas en una lista">
   <img src="docs/screenshots/habits.png" width="210" alt="Hábitos con racha actual y mejor racha">
   <img src="docs/screenshots/month.png" width="210" alt="Grilla mensual de hábitos">
   <img src="docs/screenshots/charts.png" width="210" alt="Porcentaje por hábito y gráfico de progreso diario">
 </p>
+
+| Lighthouse (móvil, producción) | Rendimiento | Accesibilidad | Buenas prácticas | SEO |
+|---|---|---|---|---|
+| [habitos-app-vtve.vercel.app](https://habitos-app-vtve.vercel.app/?demo=1) | 92 | 100 | 100 | 100 |
 
 ## Por qué la hice
 
@@ -25,10 +33,12 @@ Llevaba mis hábitos y planes de estudio en planillas. En la compu andaban bien,
 - **Porcentajes y rachas justos.** Un hábito cuenta solo los días que le tocan y dentro de su vigencia, así que agregar, dar de baja o cambiar los días de un hábito no altera los porcentajes pasados. Las rachas diarias saltean los días que no tocan y las metas semanales llevan la racha en semanas. Hay grilla mensual y gráficos de tendencia.
 - **Planes de estudio que se reprograman solos.** Hay dos tipos: **por ítems** (una lista de rooms, lecciones o capítulos, que pegás uno por línea con `Módulo: ítem` opcional) y **por cantidad** (un total de horas, páginas o ejercicios, que registrás día a día). Alcanza con decir cuántos son ("34 rooms") y el ritmo por día: la fecha de fin se calcula sola, salteando los días de descanso y los libres (o ponés tu propia fecha límite). ¿Ya ibas por la mitad? Decís "62 en total, ya hice hasta el 31": del 1 al 31 cuentan como hechos antes del plan, el cronograma arranca en el 32 y la app muestra "Vas por: Room 32". Cada avance recalcula la fecha de fin estimada, cuánto vas adelantado o atrasado y el ritmo que necesitás. Un plan se puede vincular a un hábito, que se marca solo los días en que avanzás.
 - **PWA offline-first.** Un service worker de Workbox guarda la app entera en caché. Todo se escribe primero en IndexedDB, así que la app nunca espera a la red.
-- **Sincronización entre dispositivos.** Login con mail y contraseña en Supabase; si hay conflicto, gana el último cambio.
-- **Recordatorio push a la mañana.** Web Push a la PWA instalada en iOS. Lo programa `pg_cron` y lo manda una Edge Function de Supabase, en la zona horaria de cada usuario.
+- **Sincronización entre dispositivos, en vivo.** Login con mail y contraseña en Supabase; si hay conflicto, gana el último cambio. Lo que cambiás en un dispositivo aparece en los otros en menos de un segundo (Supabase Realtime), con una consulta periódica de respaldo.
+- **Notificaciones push.** Un recordatorio a la mañana con las tareas, lo que toca de cada plan y los hábitos, y un resumen semanal los domingos a la noche (porcentaje de hábitos contra la semana anterior, avance por plan y cambio de peso). Web Push a la PWA instalada en iOS: lo programa `pg_cron` y lo manda una Edge Function de Supabase, en la zona horaria de cada usuario.
+- **Burn-up y vista anual.** Cada plan grafica el plan original, el avance real y la proyección. La vista anual muestra el porcentaje de cada mes y un "año en píxeles" con todos los días.
 - **Seguimiento opcional de peso y calorías.** Se activa en Ajustes. Escribís lo que comiste (`200 g arroz, 2 huevos, 1 taza de leche`) y la app busca cada alimento en un diccionario de ~300 comidas argentinas (valores aproximados) y en «Mis alimentos», y calcula las kcal con vista previa; también podés cargar kcal directo. Ver [docs/COMIDAS.md](docs/COMIDAS.md). Todo contra un objetivo diario, más un pesaje por día. Como el peso diario varía mucho, la app muestra la tendencia de 7 días, el ritmo semanal (calculado con una recta de mínimos cuadrados sobre las últimas 4 semanas) y la fecha en que llegarías a tu peso meta a ese ritmo.
 - **Español e inglés.** La interfaz sigue el idioma del dispositivo (o un ajuste): textos, fechas y formato de números. El dictado y la carga de comidas entienden español, porque están armados sobre frases y comidas argentinas. Un test falla si algún texto de la interfaz no tiene traducción.
+- **Modo demo.** [`?demo=1`](https://habitos-app-vtve.vercel.app/?demo=1) abre seis semanas de datos de ejemplo en una base local aparte, con la sincronización apagada, para recorrer todo sin cuenta.
 - **Respaldo.** Exportás e importás todos tus datos en JSON.
 
 ## Arquitectura
@@ -83,7 +93,8 @@ El motor se especificó **primero con tests**: 57 tests de Vitest y una guía co
 | Backend | Supabase: Postgres, Auth, RLS, Edge Functions (Deno), `pg_cron` |
 | PWA | `vite-plugin-pwa` (injectManifest), Workbox, Web Push (VAPID) |
 | Gráficos y UI | Recharts, dnd-kit (reordenar arrastrando) |
-| Tests | Vitest + `fake-indexeddb` (dominio, store, sync), Playwright (end-to-end en un iPhone emulado) |
+| Tests | Vitest + `fake-indexeddb` (dominio, store, sync, cobertura de traducciones), Playwright (end-to-end en un iPhone emulado, en español e inglés), chequeos de RLS en SQL |
+| CI | GitHub Actions: lint, tipos, tests, build y e2e en cada push |
 | Hosting | Vercel |
 
 ## Estructura
@@ -106,6 +117,7 @@ npm run dev          # http://localhost:5173 (anda sin claves, en modo solo loca
 npm test             # Vitest
 npm run e2e          # Playwright (iPhone 13 emulado)
 npm run build        # build de producción con service worker
+npm run test:rls     # chequeos de Row Level Security contra el proyecto de Supabase (se deshacen)
 ```
 
 Para activar la sincronización y el push, copiá `.env.example` a `.env.local` y completá la URL de Supabase, la publishable key y la clave pública VAPID. La guía completa explica la configuración de Supabase, las migraciones, la Edge Function, el cron, el deploy en Vercel y cómo instalarla en el iPhone: [`docs/SETUP.md`](docs/SETUP.md).
@@ -118,10 +130,9 @@ La hice con un asistente de IA para programar en pareja (Claude Code), con un ac
 
 ## Próximos pasos
 
-- Gráfico burn-up por plan (plan base, real y proyección)
-- Panel anual (`yearStats` ya está hecho y testeado)
 - Exportar a CSV
-- Sincronización en tiempo real con Supabase Realtime en lugar de consultar cada minuto
+- Notificaciones push en inglés (hoy salen solo en español)
+- Carga de comidas en inglés
 
 Más ideas en [`IDEAS.md`](IDEAS.md).
 

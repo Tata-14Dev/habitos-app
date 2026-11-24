@@ -449,4 +449,6 @@ export const EN: Record<string, string> = {
   'Entrar': 'Sign in',
   // PlanForm.tsx (habit name)
   'Estudiar {name}': 'Study {name}',
+  // PlanDetailScreen.tsx (header)
+  'ritmo {n} por día': 'pace {n} per day',
 }

@@ -108,7 +108,7 @@ export function MoreOptions({ children, summary = t('Más opciones'), hint }: { 
           {summary}
           {hint && <span className="block text-xs font-normal text-ink-soft dark:text-neutral-400">{hint}</span>}
         </span>
-        <span className="text-ink-soft transition group-open:rotate-180" aria-hidden>
+        <span className="text-ink-soft dark:text-neutral-400 transition group-open:rotate-180" aria-hidden>
           ▾
         </span>
       </summary>

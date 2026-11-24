@@ -69,11 +69,11 @@ export function TodayScreen() {
             {sortedTasks.map((task) => (
               <li key={task.id} className="flex items-center gap-3 py-2.5">
                 <Check checked={task.done} label={task.title} onChange={(v) => void updateTask(task.id, { done: v })} />
-                <span className={cx('flex-1 text-base', task.done && 'text-ink-soft line-through')}>
+                <span className={cx('flex-1 text-base', task.done && 'text-ink-soft dark:text-neutral-400 line-through')}>
                   {task.time && <span className="mr-2 font-mono font-semibold">{task.time}</span>}
                   {task.title}
                 </span>
-                <button className="px-2 text-ink-soft" aria-label={t('Borrar {name}', { name: task.title })} onClick={() => void deleteTask(task.id)}>
+                <button className="px-2 text-ink-soft dark:text-neutral-400" aria-label={t('Borrar {name}', { name: task.title })} onClick={() => void deleteTask(task.id)}>
                   ✕
                 </button>
               </li>
@@ -115,7 +115,7 @@ export function TodayScreen() {
       )}
 
       <Card>
-        <SectionTitle right={<span className="text-sm text-ink-soft">{t('Estado mental: {v}', { v: fmtMental(mentalState(mood)) })}</span>}>
+        <SectionTitle right={<span className="text-sm text-ink-soft dark:text-neutral-400">{t('Estado mental: {v}', { v: fmtMental(mentalState(mood)) })}</span>}>
           {t('Ánimo y motivación')}
         </SectionTitle>
         <p className="mb-1 text-sm">{t('Ánimo')}</p>
@@ -206,8 +206,8 @@ function PlanToday({ plan, today }: { plan: Plan; today: string }) {
           {shown.map((it) => (
             <li key={it.id} className="flex items-center gap-3 py-2.5">
               <Check checked={it.done} label={it.title} onChange={(v) => void setItemDone(it.id, v, today)} />
-              <span className={cx('flex-1', it.done && 'text-ink-soft line-through')}>
-                {it.section && <span className="text-xs text-ink-soft">{it.section} · </span>}
+              <span className={cx('flex-1', it.done && 'text-ink-soft dark:text-neutral-400 line-through')}>
+                {it.section && <span className="text-xs text-ink-soft dark:text-neutral-400">{it.section} · </span>}
                 {it.title}
               </span>
             </li>
@@ -215,7 +215,7 @@ function PlanToday({ plan, today }: { plan: Plan; today: string }) {
         </ul>
       )}
       {!model.metrics.ok && (
-        <p className="mt-2 text-sm text-ink-soft">
+        <p className="mt-2 text-sm text-ink-soft dark:text-neutral-400">
           {t('Mientras tanto podés marcar ítems desde el detalle del plan.')}{' '}
           <Link to={`/planes/${plan.id}`} className="underline">
             {t('Ver plan')}

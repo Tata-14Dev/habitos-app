@@ -59,7 +59,7 @@ function Row({ id, children }: { id: string; children: (handle: ReactNode) => Re
       {...listeners}
       type="button"
       aria-label={t('Arrastrar para reordenar')}
-      className="grid h-11 w-8 shrink-0 cursor-grab touch-none place-items-center text-lg text-ink-soft active:cursor-grabbing"
+      className="grid h-11 w-8 shrink-0 cursor-grab touch-none place-items-center text-lg text-ink-soft dark:text-neutral-400 active:cursor-grabbing"
     >
       ⠿
     </button>

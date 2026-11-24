@@ -76,7 +76,7 @@ export function MonthScreen() {
                       key={d.date}
                       data-date={d.date}
                       className={cx(
-                        'min-w-8 p-1 text-center font-normal text-ink-soft',
+                        'min-w-8 p-1 text-center font-normal text-ink-soft dark:text-neutral-400',
                         weekday(d.date) === weekBreak && 'border-l border-line dark:border-neutral-700',
                         d.date === today && 'text-ink font-bold dark:text-neutral-100',
                       )}
@@ -140,7 +140,7 @@ export function MonthScreen() {
                 <tr>
                   <th className="sticky left-0 z-10 bg-white p-2 text-left font-semibold dark:bg-neutral-800">{t('% día')}</th>
                   {stats.days.map((d) => (
-                    <td key={d.date} className="p-1 text-center text-[10px] text-ink-soft">
+                    <td key={d.date} className="p-1 text-center text-[10px] text-ink-soft dark:text-neutral-400">
                       {d.future ? '' : formatPct(d.ratio).replace('%', '')}
                     </td>
                   ))}

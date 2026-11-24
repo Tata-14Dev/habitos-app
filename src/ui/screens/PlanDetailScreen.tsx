@@ -56,7 +56,7 @@ export function PlanDetailScreen() {
         <div>
           <h1 className="text-2xl font-semibold">{plan.name}</h1>
           <p className="text-sm text-ink-soft dark:text-neutral-400">
-            {fmtDate(plan.startDate, false)} → {fmtDate(plan.deadline)} · ritmo {formatAmount(plan.pace)} por día
+            {fmtDate(plan.startDate, false)} → {fmtDate(plan.deadline)} · {t('ritmo {n} por día', { n: formatAmount(plan.pace) })}
           </p>
         </div>
         <Button onClick={() => setEditing(true)}>{t('Editar')}</Button>
@@ -158,7 +158,7 @@ export function PlanDetailScreen() {
             setEditing(false)
           }}
         />
-        <p className="mt-3 text-xs text-ink-soft">
+        <p className="mt-3 text-xs text-ink-soft dark:text-neutral-400">
           {t('Cambiar la configuración recalcula la proyección al instante. El plan original solo cambia con "Replanificar desde hoy".')}
         </p>
       </Sheet>
@@ -227,7 +227,7 @@ function Dashboard({ plan, model, items, today }: { plan: Plan; model: PlanModel
         <div className="mt-4">
           <p className="mb-1 text-sm font-medium">{t('Hoy toca')}</p>
           {m.todayItemIds.length === 0 ? (
-            <p className="text-sm text-ink-soft">{t('Nada pendiente para hoy. 🎉')}</p>
+            <p className="text-sm text-ink-soft dark:text-neutral-400">{t('Nada pendiente para hoy. 🎉')}</p>
           ) : (
             <ul className="space-y-1">
               {m.todayItemIds.map((id) => {
@@ -281,7 +281,7 @@ function ItemRow({
       {handle}
       <Check checked={item.done} label={item.title} onChange={(v) => void setItemDone(item.id, v, today)} />
       <button className="min-w-0 py-1 text-left" onClick={onEdit}>
-        <span className={cx('block truncate', item.done && 'text-ink-soft line-through')}>{item.title}</span>
+        <span className={cx('block truncate', item.done && 'text-ink-soft dark:text-neutral-400 line-through')}>{item.title}</span>
         <span className="block truncate text-xs text-ink-soft dark:text-neutral-400">
           {item.section && `${item.section} · `}
           {item.prior ? (
@@ -477,13 +477,13 @@ function Milestones({ planId, today }: { planId: string; today: ISODate }) {
               <li key={m.id} className="flex items-start gap-3 py-2">
                 <Check checked={m.done} label={m.title} onChange={(v) => void saveMilestone({ ...m, done: v })} />
                 <button className="flex-1 text-left" onClick={() => setEditing(m)}>
-                  <span className={cx('block', m.done && 'text-ink-soft line-through')}>
+                  <span className={cx('block', m.done && 'text-ink-soft dark:text-neutral-400 line-through')}>
                     {m.title} {current && !m.done && <span className="ml-1 rounded bg-progress/30 px-1.5 text-xs">{t('ahora')}</span>}
                   </span>
-                  <span className="block text-xs text-ink-soft">
+                  <span className="block text-xs text-ink-soft dark:text-neutral-400">
                     {m.from === m.to ? fmtDate(m.from) : `${fmtDate(m.from)} → ${fmtDate(m.to)}`}
                   </span>
-                  {m.description && <span className="block text-xs text-ink-soft">{m.description}</span>}
+                  {m.description && <span className="block text-xs text-ink-soft dark:text-neutral-400">{m.description}</span>}
                 </button>
               </li>
             )

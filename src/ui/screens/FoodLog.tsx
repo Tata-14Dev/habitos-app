@@ -364,7 +364,7 @@ export function MyFoodsCard() {
                 <span className="block truncate">{f.name}</span>
                 <span className={hintCls}>{describeCustom(f)}</span>
               </button>
-              <button className="px-2 text-ink-soft" aria-label={t('Borrar {name}', { name: f.name })} onClick={() => void deleteCustomFood(f.id)}>
+              <button className="px-2 text-ink-soft dark:text-neutral-400" aria-label={t('Borrar {name}', { name: f.name })} onClick={() => void deleteCustomFood(f.id)}>
                 ✕
               </button>
             </li>
@@ -411,7 +411,7 @@ export function FoodEntryList({ entries }: { entries: FoodEntry[] }) {
             ) : (
               <div className="flex min-w-0 flex-1 items-center gap-2">{head}</div>
             )}
-            <button className="px-2 text-ink-soft" aria-label={t('Borrar {name}', { name: title })} onClick={() => void deleteFood(f.id)}>
+            <button className="px-2 text-ink-soft dark:text-neutral-400" aria-label={t('Borrar {name}', { name: title })} onClick={() => void deleteFood(f.id)}>
               ✕
             </button>
           </li>

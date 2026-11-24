@@ -35,7 +35,7 @@ export default function App() {
       <div className="mx-auto min-h-dvh max-w-xl px-4 pb-28 pt-[max(0.5rem,env(safe-area-inset-top))]">
         {DEMO && <DemoBanner />}
         <SyncBadge />
-        <Suspense fallback={<p className="py-16 text-center text-ink-soft">{t('Cargando…')}</p>}>
+        <Suspense fallback={<p className="py-16 text-center text-ink-soft dark:text-neutral-400">{t('Cargando…')}</p>}>
         <Routes>
           <Route path="/" element={<TodayScreen />} />
           <Route path="/habitos" element={<HabitsScreen />} />

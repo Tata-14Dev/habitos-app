@@ -100,7 +100,7 @@ export function RemindersCard() {
         </label>
       )}
       {msg && <p className="mt-2 text-sm">{msg}</p>}
-      {isIOS() && <p className="mt-2 text-xs text-ink-soft">{t('Requiere iOS 16.4 o posterior.')}</p>}
+      {isIOS() && <p className="mt-2 text-xs text-ink-soft dark:text-neutral-400">{t('Requiere iOS 16.4 o posterior.')}</p>}
     </Card>
   )
 }

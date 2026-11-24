@@ -11,6 +11,7 @@ const named = <K extends string>(load: () => Promise<Record<K, ComponentType>>, 
   lazy(() => load().then((m) => ({ default: m[name] })))
 const HabitsScreen = named(() => import('./screens/HabitsScreen'), 'HabitsScreen')
 const MonthScreen = named(() => import('./screens/MonthScreen'), 'MonthScreen')
+const YearScreen = named(() => import('./screens/YearScreen'), 'YearScreen')
 const PlansScreen = named(() => import('./screens/PlansScreen'), 'PlansScreen')
 const PlanDetailScreen = named(() => import('./screens/PlanDetailScreen'), 'PlanDetailScreen')
 const HealthScreen = named(() => import('./screens/HealthScreen'), 'HealthScreen')
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/" element={<TodayScreen />} />
           <Route path="/habitos" element={<HabitsScreen />} />
           <Route path="/habitos/mes/:year/:month" element={<MonthScreen />} />
+          <Route path="/habitos/anio/:year" element={<YearScreen />} />
           <Route path="/planes" element={<PlansScreen />} />
           <Route path="/planes/:id" element={<PlanDetailScreen />} />
           <Route path="/salud" element={<HealthScreen />} />

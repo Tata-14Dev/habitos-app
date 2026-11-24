@@ -1,6 +1,6 @@
 # Ideas (no implementadas: anotadas para decidir después)
 
-- **Panel anual** (fase 2): tarjetas por mes y gráfico de área. `yearStats` ya está hecho y testeado en `src/domain/habits.ts`; falta la pantalla.
+- ~~Panel anual~~ (hecho: /habitos/anio/:year).
 - ~~Burn-up del plan~~ (hecho).
 - **Exportar a CSV** la grilla de hábitos y los ítems de un plan (fase 2 del brief).
 - **Dictado con IA** (opcional): hoy el separador es por reglas. Con un modelo se podrían detectar fechas ("mañana", "el jueves") y agrupar mejor.

@@ -48,7 +48,12 @@ export function MonthScreen() {
         </Link>
         <div className="text-center">
           <h1 className="text-xl font-semibold capitalize">{monthLabel(year, month)}</h1>
-          <p className="text-sm text-ink-soft dark:text-neutral-400">Mes: {formatPct(stats.total)}</p>
+          <p className="text-sm text-ink-soft dark:text-neutral-400">
+            Mes: {formatPct(stats.total)} ·{' '}
+            <Link to={`/habitos/anio/${year}`} className="underline">
+              ver {year}
+            </Link>
+          </p>
         </div>
         <Link to={`/habitos/mes/${next[0]}/${next[1]}`} className="grid size-11 place-items-center rounded-xl bg-white text-xl dark:bg-neutral-800" aria-label="Mes siguiente">
           ›

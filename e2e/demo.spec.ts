@@ -39,6 +39,17 @@ test('modo demo: datos de ejemplo en una base aparte', async ({ page }) => {
   await expect(page.getByText('Tendencia (7 días)').first()).toBeVisible()
   await page.screenshot({ path: 'test-results/demo-salud.png', fullPage: true })
 
+  // Colors: the default is Neón; picking Océano repaints the app (CSS variables on <html>)
+  const primary = () => page.evaluate(() => document.documentElement.style.getPropertyValue('--c-primary'))
+  const neon = await primary()
+  await page.getByRole('link', { name: /Ajustes/ }).click()
+  await page.getByRole('button', { name: /Océano/ }).click()
+  await expect.poll(primary).not.toBe(neon)
+  await page.getByRole('button', { name: /Personalizado/ }).click()
+  await expect(page.getByRole('radiogroup', { name: 'Color de acento' }).getByRole('radio', { name: /Celeste/ })).toBeDisabled() // too close to blue
+  await page.getByRole('button', { name: /Neón/ }).click()
+  await expect.poll(primary).toBe(neon)
+
   // Leaving the demo goes back to the real (still empty) database
   await page.getByRole('button', { name: 'Salir', exact: true }).click()
   await expect(page.getByText(/Modo demo: datos de ejemplo/)).toHaveCount(0)

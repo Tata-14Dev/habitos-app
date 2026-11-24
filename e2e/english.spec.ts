@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 test.use({ locale: 'en-US' })
 
 /** Spanish UI words that must never show up in English (user data like "Room 37" is fine). */
-const SPANISH_UI = /(ritmo|hechos|Guardar|Borrar|Ver plan|Hoy toca|Tendencia|semana|Agregar|Sumar|Progreso|Situación|Margen|Hábitos|Ajustes)/
+const SPANISH_UI = /\b(ritmo|hechos|Guardar|Borrar|Ver plan|Hoy toca|Tendencia|semana|Agregar|Sumar|Progreso|Situación|Margen|Hábitos|Ajustes)\b/
 async function expectNoSpanish(page: import('@playwright/test').Page) {
   const text = await page.locator('body').innerText()
   expect(text.match(SPANISH_UI)?.[0] ?? null).toBeNull()

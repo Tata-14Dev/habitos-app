@@ -159,7 +159,10 @@ function AccountCard() {
       <Card>
         <SectionTitle>Cuenta y sincronización</SectionTitle>
         <p className="text-base">{sync.email}</p>
-        <p className="mt-1 text-sm">{label[sync.status] ?? ''}</p>
+        <p className="mt-1 text-sm">
+          {label[sync.status] ?? ''}
+          {sync.realtime && <span className="ml-2 text-xs text-ink-soft dark:text-neutral-400">⚡ en vivo</span>}
+        </p>
         <p className="text-xs text-ink-soft dark:text-neutral-400">
           {pending > 0 ? `${pending} cambios sin subir · ` : ''}
           {sync.lastSyncAt ? `Última vez: ${new Date(sync.lastSyncAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}` : ''}

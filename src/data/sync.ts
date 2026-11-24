@@ -7,7 +7,7 @@
  * Runs on sign-in, app start, when the connection comes back, when the app returns to the
  * foreground, a couple of seconds after each local change, and every minute while visible.
  */
-import type { Session } from '@supabase/supabase-js'
+import type { RealtimeChannel, Session } from '@supabase/supabase-js'
 import { db as defaultDb, type HabitosDB } from './db'
 import { remoteWins } from './merge'
 import { onLocalChange } from './store'
@@ -21,6 +21,8 @@ export interface SyncState {
   lastSyncAt?: string
   error?: string
   email?: string
+  /** Live connection to the server: other devices' changes arrive at once. */
+  realtime?: boolean
 }
 
 const PUSH_CHUNK = 300
@@ -202,6 +204,30 @@ export async function clearLocal(db: HabitosDB = defaultDb) {
 
 let started = false
 let debounce: ReturnType<typeof setTimeout> | undefined
+let channel: RealtimeChannel | null = null
+let remoteDebounce: ReturnType<typeof setTimeout> | undefined
+
+/**
+ * Realtime: a change to this user's rows on the server (made by another device) triggers a
+ * pull within half a second. Our own pushes echo back too; pulling them is a cheap no-op.
+ * Polling and the focus/online triggers stay as a fallback if the socket drops.
+ */
+function subscribeRealtime(userId: string, db: HabitosDB) {
+  if (!supabase || channel) return
+  channel = supabase
+    .channel(`records:${userId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'records', filter: `user_id=eq.${userId}` }, () => {
+      clearTimeout(remoteDebounce)
+      remoteDebounce = setTimeout(() => void syncNow(db), 500)
+    })
+    .subscribe((status) => setState({ realtime: status === 'SUBSCRIBED' }))
+}
+
+function unsubscribeRealtime() {
+  if (supabase && channel) void supabase.removeChannel(channel)
+  channel = null
+  setState({ realtime: false })
+}
 
 /** Wire triggers. Call once at app start. */
 export function startSync(db: HabitosDB = defaultDb) {
@@ -210,12 +236,16 @@ export function startSync(db: HabitosDB = defaultDb) {
 
   supabase.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_OUT' || !session) {
+      unsubscribeRealtime()
       setState({ status: 'signedOut', email: undefined })
       return
     }
     if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
       // Defer: supabase-js warns against awaiting other auth calls inside this callback.
-      setTimeout(() => void onSignedIn(session, db), 0)
+      setTimeout(() => {
+        void onSignedIn(session, db)
+        subscribeRealtime(session.user.id, db)
+      }, 0)
     }
   })
 

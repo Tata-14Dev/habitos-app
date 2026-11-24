@@ -8,7 +8,7 @@
 - **Tareas de otros días:** hoy el dictado carga en el día de hoy. Se podría elegir la fecha o pasar las no hechas al día siguiente.
 - **Segundo recordatorio a la noche:** "Te faltan 2 hábitos".
 - ~~Separar Recharts en otro chunk~~ (hecho: carga diferida de pantallas).
-- **Sincronización en tiempo real** con Supabase Realtime en lugar de consultar cada minuto y al volver a la app.
+- ~~Sincronización en tiempo real~~ (hecho: Supabase Realtime + consulta de respaldo).
 - **Metas semanales en la vista del mes:** hoy el "% por hábito" del mes muestra "—" para las metas semanales. Se podría mostrar "3 de 4 semanas cumplidas".
 - **Salud, más adelante:** macros (proteínas, carbohidratos y grasas) en el diccionario, lector de código de barras, IMC con la altura, recordatorio para pesarse.
 - **Comidas escritas, mejoras posibles:** separar por «con» de forma inteligente («milanesa con puré» sin romper «café con leche»); ignorar verbos del dictado («comí», «almorcé»); números en palabras más allá de diez y «un cuarto (kilo)», «docena», «puñado», «lata», «copa» como unidades; dictado con IA para frases libres; mostrar «ml» en el detalle guardado de las bebidas (hoy el detalle dice «g», con 1 ml ≈ 1 g); sugerir el alimento más usado o repetir una comida de otro día; editar una comida ya cargada.

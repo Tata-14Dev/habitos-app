@@ -11,6 +11,7 @@ import { WEEKDAY_NAMES } from '../format'
 import { useAllHabitLogs, useDayMoods, useHabits, useLinkedHabitDays, usePlans, useSettings, useToday } from '../hooks'
 import { t, tn } from '../i18n'
 import { PlanPaceRow } from './PlanPace'
+import { AchievementsCard } from '../achievements'
 
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
@@ -152,6 +153,8 @@ export function StatsScreen() {
                 : t('Tu estado mental es igual los días que cumplís y los que no.')}
         </p>
       </Card>
+
+      <AchievementsCard today={today} />
 
       {plans.length > 0 && (
         <Card>

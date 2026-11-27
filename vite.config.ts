@@ -32,6 +32,12 @@ export default defineConfig({
           { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
           { src: 'maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+        // Long-press the installed app icon (Android, desktop Chrome/Edge).
+        shortcuts: [
+          { name: 'Dictar tareas', short_name: 'Dictar', url: '/?dictar=1', icons: [{ src: 'pwa-192x192.png', sizes: '192x192' }] },
+          { name: 'Hábitos', url: '/habitos', icons: [{ src: 'pwa-192x192.png', sizes: '192x192' }] },
+          { name: 'Estadísticas', url: '/habitos/estadisticas', icons: [{ src: 'pwa-192x192.png', sizes: '192x192' }] },
+        ],
       },
       devOptions: { enabled: false },
     }),

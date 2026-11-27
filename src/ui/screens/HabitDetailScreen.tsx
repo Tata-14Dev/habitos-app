@@ -1,11 +1,13 @@
 /** One habit in depth: streaks, consistency over time, a 12-month calendar and its own charts. */
 import { useMemo, useState } from 'react'
+import type { ISODate } from '../../domain/dates'
 import { Link, useParams } from 'react-router-dom'
 import { SimpleBars } from '../../charts/SimpleBars'
-import { addDays, yearMonth } from '../../domain/dates'
+import { addDays, compareISO, yearMonth } from '../../domain/dates'
 import {
   buildAmountLookup,
   buildDoneLookup,
+  currentPause,
   dailyAmountGoal,
   formatPct,
   habitStreaks,
@@ -17,7 +19,9 @@ import {
 } from '../../domain/habits'
 import { formatAmount } from '../../domain/progress'
 import { consistency, dailySeries, streakRuns, weekdayRatios, weeklySeries } from '../../domain/stats'
-import { Button, Card, Empty, SectionTitle, Sheet } from '../components'
+import { pauseHabit, resumeHabit } from '../../data/repo'
+import type { Habit } from '../../data/types'
+import { Button, Card, Empty, Field, inputCls, SectionTitle, Sheet } from '../components'
 import { fmtDate, WEEKDAY_NAMES } from '../format'
 import { habitSummary } from '../habitText'
 import { useAllHabitLogs, useHabits, useLinkedHabitDays, useSettings, useToday } from '../hooks'
@@ -37,6 +41,70 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: React
   )
 }
 
+/** Current pause (with "Reanudar"), the button to pause, and planned or past pauses. */
+function PauseCard({ habit, today, onPause }: { habit: Habit; today: ISODate; onPause: () => void }) {
+  const now = currentPause(habit, today)
+  const others = (habit.pauses ?? []).filter((p) => p !== now)
+  const range = (p: { from: ISODate; to?: ISODate }) =>
+    p.to ? `${fmtDate(p.from, false)} → ${fmtDate(p.to, false)}` : t('desde el {date}', { date: fmtDate(p.from, false) })
+  if (!now && !others.length) {
+    return (
+      <Button className="w-full" onClick={onPause}>
+        {t('⏸️ Pausar (vacaciones, enfermedad…)')}
+      </Button>
+    )
+  }
+  return (
+    <Card>
+      {now ? (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm">
+            <span className="font-semibold">{t('⏸️ En pausa')}</span> · {range(now)}
+            <span className="block text-xs text-ink-soft dark:text-neutral-400">{t('Esos días no cuentan para el porcentaje ni cortan la racha.')}</span>
+          </p>
+          <Button variant="primary" onClick={() => void resumeHabit(habit.id, today)}>
+            {t('Reanudar')}
+          </Button>
+        </div>
+      ) : (
+        <Button className="w-full" onClick={onPause}>
+          {t('⏸️ Pausar (vacaciones, enfermedad…)')}
+        </Button>
+      )}
+      {others.length > 0 && (
+        <p className="mt-3 text-xs text-ink-soft dark:text-neutral-400">
+          {t('Pausas')}: {others.map(range).join(' · ')}
+        </p>
+      )}
+    </Card>
+  )
+}
+
+function PauseForm({ habit, today, onDone }: { habit: Habit; today: ISODate; onDone: () => void }) {
+  const [from, setFrom] = useState(today)
+  const [to, setTo] = useState('')
+  const valid = !!from && (!to || compareISO(to, from) >= 0)
+  return (
+    <form
+      className="space-y-3"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (valid) void pauseHabit(habit.id, from, to || undefined).then(onDone)
+      }}
+    >
+      <Field label={t('Desde')}>
+        <input type="date" className={inputCls} value={from} onChange={(e) => setFrom(e.target.value)} required />
+      </Field>
+      <Field label={t('Hasta (opcional)')} hint={t('Si no ponés fecha, sigue en pausa hasta que toques «Reanudar».')}>
+        <input type="date" className={inputCls} value={to} min={from} onChange={(e) => setTo(e.target.value)} />
+      </Field>
+      <Button type="submit" variant="primary" className="w-full" disabled={!valid}>
+        {t('Pausar')}
+      </Button>
+    </form>
+  )
+}
+
 export function HabitDetailScreen() {
   const { id } = useParams()
   const today = useToday()
@@ -46,6 +114,7 @@ export function HabitDetailScreen() {
   const { weekStartsMonday } = useSettings()
   const ramp = useChartColors().ramp
   const [editing, setEditing] = useState(false)
+  const [pausing, setPausing] = useState(false)
 
   const habit = habits?.find((h) => h.id === id)
   const isDone = useMemo(() => buildDoneLookup(logs ?? [], linked ?? {}, habits ?? []), [logs, linked, habits])
@@ -95,6 +164,8 @@ export function HabitDetailScreen() {
         </div>
         <Button onClick={() => setEditing(true)}>{t('Editar')}</Button>
       </header>
+
+      {!isOneOff(habit) && <PauseCard habit={habit} today={today} onPause={() => setPausing(true)} />}
 
       <Card>
         <dl className="grid grid-cols-2 gap-3 text-sm">
@@ -173,6 +244,10 @@ export function HabitDetailScreen() {
           </ol>
         </Card>
       )}
+
+      <Sheet open={pausing} onClose={() => setPausing(false)} title={t('Pausar {name}', { name: habit.name })}>
+        {pausing && <PauseForm habit={habit} today={today} onDone={() => setPausing(false)} />}
+      </Sheet>
 
       <Sheet open={editing} onClose={() => setEditing(false)} title={t('Editar hábito')}>
         {editing && <HabitForm habit={habit} onDone={() => setEditing(false)} />}

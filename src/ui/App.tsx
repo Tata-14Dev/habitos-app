@@ -20,6 +20,7 @@ const PlansScreen = named(() => import('./screens/PlansScreen'), 'PlansScreen')
 const PlanDetailScreen = named(() => import('./screens/PlanDetailScreen'), 'PlanDetailScreen')
 const HealthScreen = named(() => import('./screens/HealthScreen'), 'HealthScreen')
 const SettingsScreen = named(() => import('./screens/SettingsScreen'), 'SettingsScreen')
+const QuickCheckScreen = named(() => import('./screens/QuickCheckScreen'), 'QuickCheckScreen')
 
 const TABS = [
   { to: '/', label: t('Hoy'), icon: '☀️', end: true },
@@ -54,6 +55,7 @@ export default function App() {
           <Route path="/planes/:id" element={<PlanDetailScreen />} />
           <Route path="/salud" element={<HealthScreen />} />
           <Route path="/ajustes" element={<SettingsScreen />} />
+          <Route path="/marcar/:id" element={<QuickCheckScreen />} />
           <Route path="*" element={<TodayScreen />} />
         </Routes>
         </Suspense>

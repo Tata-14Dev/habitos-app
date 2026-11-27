@@ -12,6 +12,8 @@ import { getLangPref, LANG, setLangPref, t, type LangPref } from '../i18n'
 import { getThemePref, setThemePref, type ThemePref } from '../theme'
 import { ColorsCard } from './ColorsCard'
 import { RemindersCard } from './RemindersCard'
+import { ShortcutsCard } from './ShortcutsCard'
+import { downloadCsv, type CsvKind } from '../exportCsv'
 
 export function SettingsScreen() {
   const settings = useSettings()
@@ -27,6 +29,7 @@ export function SettingsScreen() {
       <AccountCard />
       <ColorsCard />
       <RemindersCard />
+      <ShortcutsCard />
 
       <Card>
         <SectionTitle>{t('Apariencia')}</SectionTitle>
@@ -115,6 +118,21 @@ export function SettingsScreen() {
           <Button className="w-full" onClick={() => fileRef.current?.click()}>
             {t('⬆️ Importar respaldo')}
           </Button>
+          <p className="pt-2 text-sm text-ink-soft dark:text-neutral-400">{t('Exportar a planilla (CSV, para Excel o Google Sheets)')}</p>
+          <div className="grid grid-cols-2 gap-2">
+            {(
+              [
+                ['habits', t('✅ Hábitos')],
+                ['plans', t('📚 Planes')],
+                ['tasks', t('📝 Tareas')],
+                ['health', t('⚖️ Salud')],
+              ] as [CsvKind, string][]
+            ).map(([kind, label]) => (
+              <Button key={kind} onClick={() => void downloadCsv(kind).then((n) => setMsg(t('✅ Exportadas {n} filas.', { n })))}>
+                {label}
+              </Button>
+            ))}
+          </div>
           <input
             ref={fileRef}
             type="file"

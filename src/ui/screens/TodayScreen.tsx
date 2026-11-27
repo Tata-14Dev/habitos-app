@@ -1,13 +1,14 @@
-import { lazy, Suspense, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { addDays, weekStart } from '../../domain/dates'
-import { buildDoneLookup, dayRatio, formatPct, isHabitScheduled, isWeeklyGoal, mentalState } from '../../domain/habits'
+import { buildDoneLookup, currentPause, dayRatio, formatPct, isHabitPaused, isHabitScheduled, isWeeklyGoal, mentalState } from '../../domain/habits'
 import { formatTask, parseDictation, sortTasks } from '../../domain/tasks'
-import { addTasksFromText, deleteTask, setItemDone, setMood, updateTask } from '../../data/repo'
-import type { Plan, PlanItem } from '../../data/types'
+import { addTasksFromText, carryOverTasks, deleteTask, setItemDone, setMood, updateTask } from '../../data/repo'
+import type { Plan, PlanItem, Task } from '../../data/types'
 import { Button, Card, Check, cx, Empty, inputCls, PendingNotice, ProgressBar, Scale, SectionTitle } from '../components'
-import { longDay, marginText } from '../format'
-import { useDayMoods, useHabitLogs, useHabits, usePlanItems, usePlans, useSettings, useTasks, useToday, useLinkedHabitDays } from '../hooks'
+import { fmtDate, longDay, marginText, relativeDay } from '../format'
+import { useDayMoods, useHabitLogs, useHabits, usePlanItems, usePlans, useSettings, useTasks, useToday, useLinkedHabitDays, useUpcomingTasks } from '../hooks'
+import { NewAchievementCard } from '../achievements'
 import { t, tn } from '../i18n'
 import { usePlanModel } from '../usePlanModel'
 import { AmountToday } from './AmountPlan'
@@ -27,13 +28,20 @@ export function TodayScreen() {
   const logs = useHabitLogs(week, addDays(week, 6))
   const plans = usePlans()
   const tasks = useTasks(today)
+  const upcoming = useUpcomingTasks(today)
   const mood = useDayMoods(today, today)?.[0]
+
+  // Pending tasks of the last days move to today (on open and after midnight).
+  useEffect(() => {
+    void carryOverTasks(today)
+  }, [today])
 
   const linkedDays = useLinkedHabitDays()
   const isDone = useMemo(() => buildDoneLookup(logs ?? [], linkedDays ?? {}, habits ?? []), [logs, linkedDays, habits])
 
   const dueToday = (habits ?? []).filter((h) => isHabitScheduled(h, today))
-  const hasWeekly = (habits ?? []).some((h) => isWeeklyGoal(h) && h.startDate <= today && (!h.endDate || today <= h.endDate))
+  const hasWeekly = (habits ?? []).some((h) => isWeeklyGoal(h) && h.startDate <= today && (!h.endDate || today <= h.endDate) && !isHabitPaused(h, today))
+  const paused = (habits ?? []).filter((h) => isHabitPaused(h, today) && h.startDate <= today && (!h.endDate || today <= h.endDate))
   const ratio = dayRatio(habits ?? [], today, isDone)
   const sortedTasks = sortTasks(tasks ?? [])
   const pendingTasks = sortedTasks.filter((task) => !task.done).length
@@ -62,6 +70,8 @@ export function TodayScreen() {
         </Card>
       )}
 
+      <NewAchievementCard today={today} />
+
       <DictationCard today={today} />
 
       <Card>
@@ -71,19 +81,11 @@ export function TodayScreen() {
         ) : (
           <ul className="divide-y divide-line dark:divide-neutral-700">
             {sortedTasks.map((task) => (
-              <li key={task.id} className="flex items-center gap-3 py-2.5">
-                <Check checked={task.done} label={task.title} onChange={(v) => void updateTask(task.id, { done: v })} />
-                <span className={cx('flex-1 text-base', task.done && 'text-ink-soft dark:text-neutral-400 line-through')}>
-                  {task.time && <span className="mr-2 font-mono font-semibold">{task.time}</span>}
-                  {task.title}
-                </span>
-                <button className="px-2 text-ink-soft dark:text-neutral-400" aria-label={t('Borrar {name}', { name: task.title })} onClick={() => void deleteTask(task.id)}>
-                  ✕
-                </button>
-              </li>
+              <TaskRow key={task.id} task={task} />
             ))}
           </ul>
         )}
+        {upcoming && upcoming.length > 0 && <UpcomingTasks tasks={upcoming} today={today} />}
       </Card>
 
       <Card>
@@ -98,6 +100,24 @@ export function TodayScreen() {
           </Empty>
         ) : (
           <TodayHabitList habits={habits ?? []} logs={logs ?? []} isDone={isDone} today={today} plans={plans ?? []} />
+        )}
+        {paused.length > 0 && (
+          <p className="mt-3 text-sm text-ink-soft dark:text-neutral-400">
+            {'⏸️ '}
+            {paused.map((h, i) => {
+              const p = currentPause(h, today)
+              return (
+                <span key={h.id}>
+                  {i > 0 && ', '}
+                  <Link to={`/habitos/h/${h.id}`} className="underline">
+                    {h.name}
+                  </Link>
+                  {p?.to && ` (${t('hasta el {date}', { date: fmtDate(p.to, false) })})`}
+                </span>
+              )
+            })}{' '}
+            {t('en pausa: no cuentan para el porcentaje ni cortan la racha.')}
+          </p>
         )}
       </Card>
 
@@ -143,9 +163,56 @@ function fmtMental(v: number | null) {
   return v === null ? '—' : fmtFixed(v, 1)
 }
 
+function TaskRow({ task }: { task: Task }) {
+  return (
+    <li className="flex items-center gap-3 py-2.5">
+      <Check checked={task.done} label={task.title} onChange={(v) => void updateTask(task.id, { done: v })} />
+      <span className={cx('flex-1 text-base', task.done && 'text-ink-soft dark:text-neutral-400 line-through')}>
+        {task.time && <span className="mr-2 font-mono font-semibold">{task.time}</span>}
+        {task.title}
+        {task.carriedFrom && !task.done && (
+          <span className="ml-2 whitespace-nowrap text-xs text-ink-soft dark:text-neutral-400">{t('↪ del {date}', { date: fmtDate(task.carriedFrom, false) })}</span>
+        )}
+      </span>
+      <button className="px-2 text-ink-soft dark:text-neutral-400" aria-label={t('Borrar {name}', { name: task.title })} onClick={() => void deleteTask(task.id)}>
+        ✕
+      </button>
+    </li>
+  )
+}
+
+/** Tasks dictated for later days, grouped by day. */
+function UpcomingTasks({ tasks, today }: { tasks: Task[]; today: string }) {
+  const days = [...new Set(tasks.map((x) => x.date))]
+  return (
+    <details className="mt-3 border-t border-line pt-3 dark:border-neutral-700" open={days.length <= 3}>
+      <summary className="cursor-pointer text-sm font-medium">{tn(tasks.length, 'Próximos días · 1 tarea', 'Próximos días · {n} tareas')}</summary>
+      {days.map((d) => (
+        <div key={d} className="mt-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-ink-soft dark:text-neutral-400">{relativeDay(d, today)}</p>
+          <ul className="divide-y divide-line dark:divide-neutral-700">
+            {sortTasks(tasks.filter((x) => x.date === d)).map((task) => (
+              <TaskRow key={task.id} task={task} />
+            ))}
+          </ul>
+        </div>
+      ))}
+    </details>
+  )
+}
+
 function DictationCard({ today }: { today: string }) {
   const [text, setText] = useState('')
-  const preview = useMemo(() => parseDictation(text), [text])
+  const preview = useMemo(() => parseDictation(text, today), [text, today])
+  // "?dictar=1" (home-screen shortcut): jump straight to the box.
+  const [params, setParams] = useSearchParams()
+  const box = useRef<HTMLTextAreaElement>(null)
+  useEffect(() => {
+    if (params.get('dictar') === null) return
+    box.current?.focus()
+    box.current?.scrollIntoView({ block: 'center' })
+    setParams({}, { replace: true })
+  }, [params, setParams])
   const add = async () => {
     if (!preview.length) return
     await addTasksFromText(today, text)
@@ -155,16 +222,21 @@ function DictationCard({ today }: { today: string }) {
     <Card>
       <SectionTitle>{t('🎤 Dictá tu día')}</SectionTitle>
       <textarea
+        ref={box}
+        aria-label={t('Dictá tu día')}
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={3}
-        placeholder={t('Tocá el micrófono del teclado y decí, por ejemplo: «dentista a las 15, comprar yerba, llamar a Juan»')}
+        placeholder={t('Tocá el micrófono del teclado y decí, por ejemplo: «dentista mañana a las 15, comprar yerba, el lunes llamar a Juan»')}
         className={cx(inputCls, 'resize-none')}
       />
       {preview.length > 0 && (
         <ul className="mt-2 space-y-1 text-sm text-ink-soft dark:text-neutral-300">
           {preview.map((p, i) => (
-            <li key={i}>• {formatTask(p)}</li>
+            <li key={i}>
+              • {p.date && <span className="font-medium">{relativeDay(p.date, today)} · </span>}
+              {formatTask(p)}
+            </li>
           ))}
         </ul>
       )}

@@ -5,6 +5,7 @@ import {
   buildDoneLookup,
   habitStreaks,
   isHabitActive,
+  isHabitPaused,
   isOneOff,
   isWeeklyGoal,
   weeklyStreaks,
@@ -79,6 +80,7 @@ export function HabitsScreen() {
                       {!isOneOff(h) && ' · ' + t('desde {date}', { date: fmtDate(h.startDate, false) })}
                       {h.endDate ? ' ' + t('hasta {date}', { date: fmtDate(h.endDate, false) }) : ''}
                       {!active && ' · ' + t('fuera de vigencia')}
+                      {active && isHabitPaused(h, today) && ' · ⏸️ ' + t('en pausa')}
                     </span>
                   </Link>
                   {!isOneOff(h) && (

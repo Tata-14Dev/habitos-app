@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
-import { todayISO, type ISODate } from '../domain/dates'
+import { addDays, todayISO, type ISODate } from '../domain/dates'
 import { linkedHabitDays, linkedHabitLogDays } from '../domain/habits'
 import { db } from '../data/db'
 import { getSyncState, subscribeSync } from '../data/sync'
@@ -131,4 +131,15 @@ export function useSyncState() {
 
 export function usePendingChanges() {
   return useLiveQuery(() => db.outbox.count(), []) ?? 0
+}
+
+/** Tasks after `today` (up to `days` ahead), by date. */
+export function useUpcomingTasks(today: ISODate, days = 30) {
+  return useLiveQuery(
+    async () =>
+      alive(await db.tasks.where('date').between(today, addDays(today, days), false, true).toArray()).sort(
+        (a, b) => a.date.localeCompare(b.date) || a.order - b.order,
+      ),
+    [today, days],
+  )
 }

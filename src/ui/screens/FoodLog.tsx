@@ -4,13 +4,13 @@
  * The parsing and the math live in `src/domain/foodLog.ts`.
  */
 import { useMemo, useState } from 'react'
-import type { ISODate } from '../../domain/dates'
+import { addDays, type ISODate } from '../../domain/dates'
 import { amountLabel, analyzeFoodText, buildFoodIndex, formatQty, type FoodIndex, type FoodLine } from '../../domain/foodLog'
-import { formatKcal } from '../../domain/health'
-import { addFood, deleteCustomFood, deleteFood, saveCustomFood } from '../../data/repo'
+import { formatKcal, frequentMeals } from '../../domain/health'
+import { addFood, deleteCustomFood, deleteFood, repeatFood, saveCustomFood, updateFood } from '../../data/repo'
 import type { CustomFood, FoodEntry, FoodItem, Meal } from '../../data/types'
 import { Button, Card, cx, Empty, Field, inputCls, SectionTitle, Sheet } from '../components'
-import { useCustomFoods } from '../hooks'
+import { useCustomFoods, useFoodEntries } from '../hooks'
 import { t, tn } from '../i18n'
 
 const MEALS: { value: Meal; label: string; icon: string }[] = [
@@ -139,15 +139,22 @@ function LineRow({
   )
 }
 
-/** Main food form in Salud: text with live preview, or plain kcal. */
-export function MealForm({ today }: { today: ISODate }) {
+/** Main food form in Salud: text with live preview, or plain kcal. With `entry`, edits that meal. */
+export function MealForm({ today, entry, onDone }: { today: ISODate; entry?: FoodEntry; onDone?: () => void }) {
   const index = useFoodIndex()
-  const [mode, setMode] = useState<'text' | 'kcal'>('text')
-  const [text, setText] = useState('')
-  const [manual, setManual] = useState<Record<string, string>>({})
-  const [kcal, setKcal] = useState('')
-  const [label, setLabel] = useState('')
-  const [meal, setMeal] = useState<Meal>(mealForNow())
+  const typed = !!entry?.items?.length
+  const [mode, setMode] = useState<'text' | 'kcal'>(entry && !typed ? 'kcal' : 'text')
+  const [text, setText] = useState(typed ? (entry?.label ?? '') : '')
+  // Lines typed with their kcal by hand come back as manual values.
+  const [manual, setManual] = useState<Record<string, string>>(() =>
+    Object.fromEntries((entry?.items ?? []).filter((i) => !i.foodId).map((i) => [i.text, String(i.kcal)])),
+  )
+  const [kcal, setKcal] = useState(entry && !typed ? String(entry.kcal) : '')
+  const [label, setLabel] = useState(entry && !typed ? (entry.label ?? '') : '')
+  const [meal, setMeal] = useState<Meal>(entry?.meal ?? mealForNow())
+  /** New meal → add it; editing → replace the entry. */
+  const save = (data: { kcal: number; label?: string; items?: FoodItem[] }) =>
+    entry ? updateFood(entry.id, { ...data, meal }).then(() => onDone?.()) : addFood({ date: today, meal, ...data }).then(() => onDone?.())
   const [teach, setTeach] = useState<string | null>(null)
 
   const analysis = useMemo(() => analyzeFoodText(text, index), [text, index])
@@ -167,7 +174,7 @@ export function MealForm({ today }: { today: ISODate }) {
     const items: FoodItem[] = analysis.lines.map((l) =>
       l.status === 'ok' ? { text: l.raw, foodId: l.food.id, grams: l.amount, kcal: l.kcal } : { text: l.raw, kcal: manualKcal(l) ?? 0 },
     )
-    void addFood({ date: today, kcal: total, label: text.trim(), meal, items }).then(() => {
+    void save({ kcal: total, label: text.trim(), items }).then(() => {
       setText('')
       setManual({})
     })
@@ -242,7 +249,7 @@ export function MealForm({ today }: { today: ISODate }) {
 
           <MealPicker meal={meal} onChange={setMeal} />
           <Button type="submit" variant="primary" className="w-full" disabled={!textValid}>
-            {analysis.lines.length ? t('Sumar {n} kcal', { n: formatKcal(total) }) : t('Sumar')}
+            {entry ? t('Guardar cambios') : analysis.lines.length ? t('Sumar {n} kcal', { n: formatKcal(total) }) : t('Sumar')}
           </Button>
         </form>
       ) : (
@@ -251,7 +258,7 @@ export function MealForm({ today }: { today: ISODate }) {
           onSubmit={(e) => {
             e.preventDefault()
             if (!kcalValid) return
-            void addFood({ date: today, kcal: n, label: label.trim() || undefined, meal }).then(() => {
+            void save({ kcal: n, label: label.trim() || undefined }).then(() => {
               setKcal('')
               setLabel('')
             })
@@ -261,7 +268,7 @@ export function MealForm({ today }: { today: ISODate }) {
           <div className="grid grid-cols-[1fr_auto] gap-2">
             <input inputMode="numeric" className={inputCls} value={kcal} onChange={(e) => setKcal(e.target.value)} placeholder="kcal" aria-label={t('Calorías')} />
             <Button type="submit" variant="primary" disabled={!kcalValid}>
-              {t('Sumar kcal')}
+              {entry ? t('Guardar') : t('Sumar kcal')}
             </Button>
           </div>
           <MealPicker meal={meal} onChange={setMeal} />
@@ -378,46 +385,93 @@ export function MyFoodsCard() {
   )
 }
 
-/** Today's entries; the ones typed as text expand to show their breakdown. */
+/** Today's entries; the ones typed as text expand to show their breakdown. Each one can be edited. */
 export function FoodEntryList({ entries }: { entries: FoodEntry[] }) {
+  const [editing, setEditing] = useState<FoodEntry | null>(null)
   if (!entries.length) return null
   return (
-    <ul className="mt-3 divide-y divide-line dark:divide-neutral-700">
-      {entries.map((f) => {
-        const m = MEALS.find((x) => x.value === f.meal)
-        const title = f.label ?? m?.label ?? t('Comida')
-        const head = (
-          <>
-            <span className="text-lg">{m?.icon ?? '🍴'}</span>
-            <span className="min-w-0 flex-1 truncate">{title}</span>
-            <span className="font-medium whitespace-nowrap">{formatKcal(f.kcal)} kcal</span>
-          </>
-        )
-        return (
-          <li key={f.id} className="flex items-start gap-1 py-2">
-            {f.items?.length ? (
-              <details className="min-w-0 flex-1">
-                <summary className="flex cursor-pointer list-none items-center gap-2">{head}</summary>
-                <ul className="mt-1 space-y-0.5 pl-8 text-sm" aria-label={t('Detalle de {name}', { name: title })}>
-                  {f.items.map((it, i) => (
-                    <li key={i} className="flex gap-2">
-                      <span className="min-w-0 flex-1 truncate">{it.text}</span>
-                      {it.grams !== undefined && <span className={hintCls}>{formatQty(it.grams)} g</span>}
-                      <span className="whitespace-nowrap">{formatKcal(it.kcal)} kcal</span>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            ) : (
-              <div className="flex min-w-0 flex-1 items-center gap-2">{head}</div>
-            )}
-            <button className="px-2 text-ink-soft dark:text-neutral-400" aria-label={t('Borrar {name}', { name: title })} onClick={() => void deleteFood(f.id)}>
-              ✕
-            </button>
-          </li>
-        )
-      })}
-    </ul>
+    <>
+      <Sheet open={editing !== null} onClose={() => setEditing(null)} title={t('Editar comida')}>
+        {editing && <MealForm key={editing.id} today={editing.date} entry={editing} onDone={() => setEditing(null)} />}
+      </Sheet>
+      <ul className="mt-3 divide-y divide-line dark:divide-neutral-700">
+        {entries.map((f) => {
+          const m = MEALS.find((x) => x.value === f.meal)
+          const title = f.label ?? m?.label ?? t('Comida')
+          const head = (
+            <>
+              <span className="text-lg">{m?.icon ?? '🍴'}</span>
+              <span className="min-w-0 flex-1 truncate">{title}</span>
+              <span className="font-medium whitespace-nowrap">{formatKcal(f.kcal)} kcal</span>
+            </>
+          )
+          return (
+            <li key={f.id} className="flex items-start gap-1 py-2">
+              {f.items?.length ? (
+                <details className="min-w-0 flex-1">
+                  <summary className="flex cursor-pointer list-none items-center gap-2">{head}</summary>
+                  <ul className="mt-1 space-y-0.5 pl-8 text-sm" aria-label={t('Detalle de {name}', { name: title })}>
+                    {f.items.map((it, i) => (
+                      <li key={i} className="flex gap-2">
+                        <span className="min-w-0 flex-1 truncate">{it.text}</span>
+                        {it.grams !== undefined && <span className={hintCls}>{formatQty(it.grams)} g</span>}
+                        <span className="whitespace-nowrap">{formatKcal(it.kcal)} kcal</span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ) : (
+                <div className="flex min-w-0 flex-1 items-center gap-2">{head}</div>
+              )}
+              <button className="px-2 text-ink-soft dark:text-neutral-400" aria-label={t('Editar {name}', { name: title })} onClick={() => setEditing(f)}>
+                ✎
+              </button>
+              <button className="px-2 text-ink-soft dark:text-neutral-400" aria-label={t('Borrar {name}', { name: title })} onClick={() => void deleteFood(f.id)}>
+                ✕
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </>
+  )
+}
+
+/** "Repetir": the meals of the last 30 days you eat most, to log again with one tap. */
+export function RepeatMeals({ today, limit = 6 }: { today: ISODate; limit?: number }) {
+  const recent = useFoodEntries(addDays(today, -29), today)
+  const [added, setAdded] = useState<string | null>(null)
+  const meals = useMemo(() => frequentMeals(recent ?? [], today, limit), [recent, today, limit])
+  if (!meals.length) return null
+  return (
+    <div className="mt-3">
+      <p className={cx(hintCls, 'mb-1')}>{t('Repetir una comida')}</p>
+      <ul className="flex flex-wrap gap-2">
+        {meals.map((m) => {
+          const icon = MEALS.find((x) => x.value === m.meal)?.icon ?? '🍴'
+          const name = m.label ?? MEALS.find((x) => x.value === m.meal)?.label ?? t('Comida')
+          return (
+            <li key={m.id} className="max-w-full">
+              <button
+                type="button"
+                className="flex max-w-full items-center gap-1 rounded-full bg-paper px-3 py-1.5 text-sm dark:bg-neutral-700"
+                aria-label={t('Sumar otra vez {name} ({n} kcal)', { name, n: formatKcal(m.kcal) })}
+                onClick={() =>
+                  void repeatFood(m, today).then(() => {
+                    setAdded(m.id)
+                    setTimeout(() => setAdded((a) => (a === m.id ? null : a)), 2000)
+                  })
+                }
+              >
+                <span aria-hidden>{added === m.id ? '✓' : icon}</span>
+                <span className="truncate">{name}</span>
+                <span className={cx(hintCls, 'shrink-0 whitespace-nowrap')}>· {formatKcal(m.kcal)}</span>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
   )
 }
 

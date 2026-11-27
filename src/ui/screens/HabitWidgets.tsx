@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { ISODate } from '../../domain/dates'
 import {
   buildAmountLookup,
+  isHabitPaused,
   isHabitScheduled,
   isWeeklyGoal,
   weekProgress,
@@ -19,7 +20,7 @@ import { t } from '../i18n'
 const parseNum = (s: string) => Number(s.replace(',', '.'))
 
 /** Quick step for amount goals: half an hour for small targets, 1 for bigger ones. */
-function stepFor(target: number): number {
+export function stepFor(target: number): number {
   return target <= 2 ? 0.5 : 1
 }
 
@@ -34,7 +35,7 @@ function HabitName({ h, sub }: { h: Habit; sub?: string }) {
 }
 
 /** Sheet to set the exact amount of a day. */
-function AmountSheet({ habit, date, current, onClose }: { habit: Habit; date: ISODate; current: number; onClose: () => void }) {
+export function AmountSheet({ habit, date, current, onClose }: { habit: Habit; date: ISODate; current: number; onClose: () => void }) {
   const [value, setValue] = useState(current ? fmtDecimal(current) : '')
   const n = parseNum(value)
   const unit = habit.goal?.type === 'amount' ? habit.goal.unit : ''
@@ -180,7 +181,7 @@ export function WeeklyGoalList({
   today: ISODate
   mondayFirst: boolean
 }) {
-  const weekly = habits.filter((h) => isWeeklyGoal(h) && h.startDate <= today && (!h.endDate || today <= h.endDate))
+  const weekly = habits.filter((h) => isWeeklyGoal(h) && h.startDate <= today && (!h.endDate || today <= h.endDate) && !isHabitPaused(h, today))
   if (!weekly.length) return null
   const amountOf = buildAmountLookup(logs)
   const doneToday = new Set(logs.filter((l) => l.date === today && l.done && !l.deletedAt).map((l) => l.habitId))

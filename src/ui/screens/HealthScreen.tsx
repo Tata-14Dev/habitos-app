@@ -7,7 +7,7 @@ import { calorieSummary, dayCalories, formatKcal, formatKg, weightSeries, weight
 import { saveWeight, updateSettings } from '../../data/repo'
 import { Button, Card, cx, Empty, Field, inputCls, ProgressBar, SectionTitle, Sheet } from '../components'
 import { useBodyWeights, useFoodEntries, useSettings, useToday } from '../hooks'
-import { FoodEntryList, MealForm, MyFoodsCard, QuickFoodForm } from './FoodLog'
+import { FoodEntryList, MealForm, MyFoodsCard, QuickFoodForm, RepeatMeals } from './FoodLog'
 import { fmtDate } from '../format'
 import { fmtDecimal } from '../../domain/numberFormat'
 import { t, tn } from '../i18n'
@@ -113,6 +113,7 @@ export function HealthScreen() {
         <div className="mt-3">
           <MealForm today={today} />
         </div>
+        <RepeatMeals today={today} />
         <FoodEntryList entries={todays} />
       </Card>
 
@@ -220,6 +221,7 @@ export function HealthTodayCard({ today }: { today: ISODate }) {
       <div className="mt-3">
         <QuickFoodForm today={today} />
       </div>
+      <RepeatMeals today={today} limit={3} />
     </Card>
   )
 }

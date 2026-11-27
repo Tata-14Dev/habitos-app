@@ -1,6 +1,6 @@
 import { format } from 'date-fns'
 import { enUS, es } from 'date-fns/locale'
-import { formatAR, parseISO, type ISODate } from '../domain/dates'
+import { diffDays, formatAR, parseISO, weekday, type ISODate } from '../domain/dates'
 import { LANG, t, tn } from './i18n'
 
 const locale = LANG === 'en' ? enUS : es
@@ -39,4 +39,14 @@ export function marginText(days: number): string {
   if (days === 0) return t('✅ Justo a tiempo')
   const n = Math.abs(days)
   return days > 0 ? tn(n, '✅ Te sobra 1 día', '✅ Te sobran {n} días') : tn(n, '⚠️ Te pasás 1 día', '⚠️ Te pasás {n} días')
+}
+
+/** "hoy" / "mañana" / "ayer" / "lunes 30/11" (es) · "tomorrow" / "Monday, Nov 30" (en). */
+export function relativeDay(iso: ISODate, today: ISODate): string {
+  const d = diffDays(iso, today)
+  if (d === 0) return t('hoy')
+  if (d === 1) return t('mañana')
+  if (d === -1) return t('ayer')
+  const name = WEEKDAY_NAMES[weekday(iso)]
+  return LANG === 'en' ? `${name}, ${fmtDate(iso, false)}` : `${name.toLowerCase()} ${fmtDate(iso, false)}`
 }

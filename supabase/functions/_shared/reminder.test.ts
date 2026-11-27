@@ -102,6 +102,27 @@ describe('habit types in the reminder', () => {
     })
     expect(r.body).toBe('✅ 1 hábito para hoy')
   })
+  it('paused habits are not due', () => {
+    const h = { id: 'a', name: 'Correr', ...base, pauses: [{ from: '2026-11-15', to: '2026-11-20' }] }
+    expect(habitDueOn(h, '2026-11-17')).toBe(false)
+    expect(habitDueOn(h, '2026-11-21')).toBe(true)
+    expect(habitDueOn({ ...h, pauses: [{ from: '2026-11-15' }] }, '2026-12-25')).toBe(false)
+  })
+  it('pending tasks of the last 7 days count (they move to today in the app)', () => {
+    const r = buildReminder('2026-11-17', {
+      tasks: [
+        { date: '2026-11-16', title: 'Pagar la luz', done: false },
+        { date: '2026-11-16', title: 'Hecha', done: true },
+        { date: '2026-11-01', title: 'Muy vieja', done: false },
+        { date: '2026-11-17', time: '10:00', title: 'Dentista', done: false },
+      ],
+      plans: [],
+      planItems: [],
+      projections: [],
+      habits: [],
+    })
+    expect(r.body).toBe('📝 10:00 Dentista · Pagar la luz')
+  })
 })
 
 describe('weekly summary', () => {

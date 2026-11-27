@@ -58,6 +58,7 @@ export interface ReminderData {
     onDate?: ISODate
     weekdays?: number[]
     goal?: { type: 'amount'; period: 'day' | 'week'; target?: number; unit?: string } | { type: 'times'; target?: number }
+    pauses?: { from: ISODate; to?: ISODate }[]
   })[]
   plans: (Alive & {
     id: string
@@ -85,6 +86,7 @@ function weekdayOf(date: ISODate): number {
 /** Same rule as isHabitScheduled in src/domain/habits.ts (kept dependency-free for Deno). */
 export function habitDueOn(h: ReminderData['habits'][number], date: ISODate): boolean {
   if (h.startDate > date || (h.endDate && date > h.endDate)) return false
+  if ((h.pauses ?? []).some((p) => p.from <= date && (!p.to || date <= p.to))) return false
   if (h.kind === 'scheduled') return h.onDate ? h.onDate === date : (h.weekdays ?? []).includes(weekdayOf(date))
   if (h.kind === 'progress') return !!h.goal && h.goal.type === 'amount' && h.goal.period === 'day'
   return true
@@ -111,7 +113,8 @@ export function buildReminder(date: ISODate, d: ReminderData): { title: string; 
   const live = <T extends Alive>(xs: T[]) => xs.filter((x) => !x.deletedAt)
 
   const tasks = live(d.tasks)
-    .filter((t) => t.date === date && !t.done)
+    // Pending tasks of the last 7 days move to today when the app opens (carryOverTasks): count them too.
+    .filter((t) => !t.done && t.date <= date && t.date >= addDaysISO(date, -7))
     .sort((a, b) => (a.time && b.time ? a.time.localeCompare(b.time) : a.time ? -1 : b.time ? 1 : 0))
   const habits = live(d.habits).filter((h) => habitDueOn(h, date))
 

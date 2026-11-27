@@ -36,7 +36,7 @@ test('flujo básico: ejemplo, plan, ítems, hábitos y dictado', async ({ page }
 
   // Hábitos y mes
   await page.getByRole('link', { name: /Hábitos/ }).click()
-  await page.getByRole('link', { name: /Ver mes/ }).click()
+  await page.getByRole('link', { name: /📅 Mes/ }).click()
   await expect(page.getByText('Progreso diario')).toBeVisible()
   await page.screenshot({ path: 'test-results/mes.png', fullPage: true })
 

@@ -30,7 +30,7 @@ test('modo demo: datos de ejemplo en una base aparte', async ({ page }) => {
 
   // Month grid and health have history
   await page.getByRole('link', { name: /Hábitos/ }).click()
-  await page.getByRole('link', { name: /Ver mes/ }).click()
+  await page.getByRole('link', { name: /📅 Mes/ }).click()
   await expect(page.getByText('Progreso diario')).toBeVisible()
   await page.getByRole('link', { name: /ver 20/ }).click()
   await expect(page.getByText('Día por día')).toBeVisible()
@@ -38,6 +38,21 @@ test('modo demo: datos de ejemplo en una base aparte', async ({ page }) => {
   await page.getByRole('link', { name: /Salud/ }).click()
   await expect(page.getByText('Tendencia (7 días)').first()).toBeVisible()
   await page.screenshot({ path: 'test-results/demo-salud.png', fullPage: true })
+
+  // Stats: overview → one habit in depth → edit from there
+  await page.getByRole('link', { name: /Hábitos/ }).first().click()
+  await page.getByRole('link', { name: /Estadísticas/ }).click()
+  await expect(page.getByText('Constancia · últimos 30 días')).toBeVisible()
+  await expect(page.getByText(/Tu mejor día:/)).toBeVisible()
+  await expect(page.getByText('Planes · ritmo semanal')).toBeVisible()
+  await page.screenshot({ path: 'test-results/demo-stats.png', fullPage: true })
+  await page.getByRole('link', { name: /Pasear al perro/ }).click()
+  await expect(page.getByText('Mejor racha', { exact: true })).toBeVisible()
+  await expect(page.getByText('Calendario')).toBeVisible()
+  await page.screenshot({ path: 'test-results/demo-habit.png', fullPage: true })
+  await page.getByRole('button', { name: 'Editar' }).click()
+  await expect(page.getByRole('heading', { name: 'Editar hábito' })).toBeVisible()
+  await page.keyboard.press('Escape')
 
   // Colors: the default is Neón; picking Océano repaints the app (CSS variables on <html>)
   const primary = () => page.evaluate(() => document.documentElement.style.getPropertyValue('--c-primary'))

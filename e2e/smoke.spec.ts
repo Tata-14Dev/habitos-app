@@ -174,7 +174,7 @@ test('flujo básico: ejemplo, plan, ítems, hábitos y dictado', async ({ page }
   await expect(page.getByText('Total: 865 kcal')).toBeVisible()
   await page.getByRole('button', { name: 'Sumar 865 kcal' }).click()
   await expect(page.getByLabel('¿Qué comiste?')).toHaveValue('')
-  await page.getByText('200 g arroz, 2 huevos 1 guiso de la abuela').click() // expand the breakdown
+  await page.locator('summary').getByText('200 g arroz, 2 huevos 1 guiso de la abuela').click() // expand the breakdown
   const detail = page.getByRole('list', { name: /Detalle de/ })
   await expect(detail.getByText('200 g arroz')).toBeVisible()
   await expect(detail.getByText('450 kcal')).toBeVisible()

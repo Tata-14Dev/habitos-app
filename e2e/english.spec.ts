@@ -51,6 +51,9 @@ test('English UI follows the device language, demo included', async ({ page }) =
   // Switching the language in Settings reloads the app in Spanish
   await page.getByRole('link', { name: /Settings/ }).click()
   await expect(page.getByText('Appearance')).toBeVisible()
+  await page.getByText('Check off a habit or dictate without opening the app first.').click()
+  await expect(page.getByText('🎤 Dictate tasks')).toBeVisible()
+  await expect(page.getByRole('button', { name: '✅ Habits' })).toBeVisible()
   await expectNoSpanish(page)
   await page.getByRole('button', { name: 'Español' }).click()
   await expect(page.getByRole('heading', { name: 'Ajustes', exact: true })).toBeVisible()

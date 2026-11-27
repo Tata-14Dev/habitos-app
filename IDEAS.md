@@ -2,10 +2,12 @@
 
 - ~~Panel anual~~ (hecho: /habitos/anio/:year).
 - ~~Burn-up del plan~~ (hecho).
-- **Exportar a CSV** la grilla de hábitos y los ítems de un plan (fase 2 del brief).
+- ~~Exportar a CSV~~ (hecho: hábitos, planes, tareas y salud).
+- **Código QR por hábito** en la pantalla de Atajos (hoy hay que generarlo afuera con el enlace).
+- **Logros:** avisar con una notificación push cuando se logra uno (hoy aparece una tarjeta en Hoy).
 - **Dictado con IA** (opcional): hoy el separador es por reglas. Con un modelo se podrían detectar fechas ("mañana", "el jueves") y agrupar mejor.
 - **Login con Google** para la compu (en el iPhone instalado conviene seguir con mail y contraseña).
-- **Tareas de otros días:** hoy el dictado carga en el día de hoy. Se podría elegir la fecha o pasar las no hechas al día siguiente.
+- ~~Tareas de otros días~~ (hecho: el dictado entiende días y las no hechas pasan al día siguiente). Falta: botón "pasar a mañana" a mano en cada tarea, y entender días en inglés en el dictado.
 - **Segundo recordatorio a la noche:** "Te faltan 2 hábitos".
 - ~~Separar Recharts en otro chunk~~ (hecho: carga diferida de pantallas).
 - ~~Sincronización en tiempo real~~ (hecho: Supabase Realtime + consulta de respaldo).

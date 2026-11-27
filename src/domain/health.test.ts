@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { addDays } from './dates'
-import { calorieSummary, dayCalories, formatKg, trendOn, weeklyRate, weightSeries, weightSummary, type WeightEntry } from './health'
+import { calorieSummary, dayCalories, formatKg, trendOn, weeklyRate, weightSeries, weightSummary, frequentMeals, type WeightEntry } from './health'
 
 const food = (date: string, kcal: number) => ({ date, kcal })
 
@@ -61,5 +61,29 @@ describe('weight', () => {
   })
   it('formats with a decimal comma', () => {
     expect(formatKg(72.36)).toBe('72,4')
+  })
+})
+
+describe('frequentMeals', () => {
+  const e = (date: string, label: string | undefined, kcal: number, meal = 'desayuno') => ({ date, label, kcal, meal })
+  it('most frequent first, latest copy, only the last 30 days', () => {
+    const list = frequentMeals(
+      [
+        e('2026-11-20', 'Café con leche, 2 tostadas', 300),
+        e('2026-11-26', 'café con leche, 2 tostadas ', 310),
+        e('2026-11-25', 'Milanesa con puré', 800, 'almuerzo'),
+        e('2026-11-27', undefined, 150, 'snack'),
+        e('2026-11-26', undefined, 150, 'snack'),
+        e('2026-11-27', undefined, 200, 'snack'),
+        e('2026-10-01', 'Pizza', 900, 'cena'),
+      ],
+      '2026-11-27',
+    )
+    expect(list.map((m) => [m.label, m.kcal])).toEqual([
+      [undefined, 150],
+      ['café con leche, 2 tostadas ', 310],
+      [undefined, 200],
+      ['Milanesa con puré', 800],
+    ])
   })
 })

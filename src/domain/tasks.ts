@@ -1,3 +1,5 @@
+import { addDays, compareISO, isISODate, weekday, type ISODate } from './dates'
+
 /**
  * Daily tasks from dictation (no AI). The text the iPhone keyboard dictation produces is split
  * into tasks, each taken literally; if a time is mentioned it goes to the `time` field and is
@@ -5,6 +7,8 @@
  */
 
 export interface ParsedTask {
+  /** Day the task is for, when the text names one ("mañana", "el jueves", "el 15"). */
+  date?: ISODate
   /** 'HH:MM' (24 h) or undefined. */
   time?: string
   title: string
@@ -98,22 +102,121 @@ function cleanTitle(s: string): string {
   return t.charAt(0).toLocaleUpperCase('es-AR') + t.slice(1)
 }
 
+// ─── Dates ("mañana", "el jueves", "el 15 de diciembre") ─────────────────────
+
+const WEEKDAYS: Record<string, number> = {
+  domingo: 0, lunes: 1, martes: 2, miercoles: 3, miércoles: 3, jueves: 4, viernes: 5, sabado: 6, sábado: 6,
+}
+const MONTHS: Record<string, number> = {
+  enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6, julio: 7, agosto: 8,
+  septiembre: 9, setiembre: 9, octubre: 10, noviembre: 11, diciembre: 12,
+}
+const pad = (n: number) => String(n).padStart(2, '0')
+/** "para el", "el", "este"… before a day. */
+const PREP = String.raw`(?:\b(?:para|el|este)\s+)*`
+/** End of a word that may end in "ñ" or an accented letter (\b doesn't know them). */
+const END = String.raw`(?![\p{L}\d])`
+
+/** Day `d` of month `m`: this year, or next year if it already passed. */
+function nextDayMonth(today: ISODate, d: number, m: number): ISODate | undefined {
+  const y = Number(today.slice(0, 4))
+  const iso = `${y}-${pad(m)}-${pad(d)}`
+  if (!isISODate(iso)) return undefined
+  if (compareISO(iso, today) >= 0) return iso
+  const next = `${y + 1}-${pad(m)}-${pad(d)}`
+  return isISODate(next) ? next : undefined
+}
+
+/** Day `d` of this month, or of next month if it already passed. */
+function nextDayOfMonth(today: ISODate, d: number): ISODate | undefined {
+  const [y, m] = today.split('-').map(Number)
+  const here = `${y}-${pad(m)}-${pad(d)}`
+  if (isISODate(here) && compareISO(here, today) >= 0) return here
+  const nm = m === 12 ? 1 : m + 1
+  const next = `${m === 12 ? y + 1 : y}-${pad(nm)}-${pad(d)}`
+  return isISODate(next) ? next : undefined
+}
+
+const DATE_PATTERNS: { re: RegExp; date: (m: RegExpExecArray, today: ISODate) => ISODate | undefined }[] = [
+  { re: new RegExp(String.raw`(?:\bpara\s+)?\bpasado\s+mañana${END}`, 'iu'), date: (_, t) => addDays(t, 2) },
+  // "mañana", but not "a la mañana" / "esta mañana" (the moment of the day, not tomorrow).
+  { re: new RegExp(String.raw`(?<!\b(?:la|esta|por|de)\s+)(?:\bpara\s+)?\bmañana${END}`, 'iu'), date: (_, t) => addDays(t, 1) },
+  { re: /(?:\bpara\s+)?\bhoy\b/iu, date: (_, t) => t },
+  {
+    re: new RegExp(String.raw`${PREP}\b(\d{1,2})\s+de\s+(${Object.keys(MONTHS).join('|')})\b`, 'iu'),
+    date: (m, t) => nextDayMonth(t, Number(m[1]), MONTHS[m[2].toLowerCase()]),
+  },
+  { re: new RegExp(String.raw`${PREP}\b(\d{1,2})/(\d{1,2})\b`, 'iu'), date: (m, t) => nextDayMonth(t, Number(m[1]), Number(m[2])) },
+  {
+    // "el lunes", "el próximo lunes", "el lunes que viene": always the NEXT one (on a Monday, a week ahead).
+    re: new RegExp(String.raw`${PREP}(?:\bpr[oó]ximo\s+)?\b(${Object.keys(WEEKDAYS).join('|')})${END}(?:\s+que\s+viene)?`, 'iu'),
+    date: (m, t) => {
+      const diff = (WEEKDAYS[m[1].toLowerCase()] - weekday(t) + 7) % 7
+      return addDays(t, diff === 0 ? 7 : diff)
+    },
+  },
+  // "el 15" (day of the month; needs "el" so quantities like "comprar 2 kilos" don't match).
+  { re: /(?:\bpara\s+)?\bel\s+(\d{1,2})\b(?![:.,]\d)/iu, date: (m, t) => nextDayOfMonth(t, Number(m[1])) },
+]
+
+/** Finds a day in `text` relative to `today`. Returns it and the text without the phrase. */
+export function extractDate(text: string, today: ISODate): { date?: ISODate; rest: string } {
+  for (const { re, date } of DATE_PATTERNS) {
+    const m = re.exec(text)
+    if (!m) continue
+    const d = date(m, today)
+    if (!d) continue
+    return { date: d, rest: (text.slice(0, m.index) + ' ' + text.slice(m.index + m[0].length)).replace(/\s+/g, ' ').trim() }
+  }
+  return { rest: text }
+}
+
+/** "Mañana: comprar pan" → heading "Mañana" + the rest. Only when the heading is just a day. */
+const HEADING_RE = /^([^:]{1,30}):\s*(.*)$/su
+
 /**
- * Splits dictated text into tasks.
+ * Splits dictated text into tasks. With `today`, days are recognized too ("mañana", "el jueves",
+ * "el 15"). A heading that is only a day ("Mañana: …", or a chunk "el lunes" on its own) applies
+ * to the tasks after it.
  * @example parseDictation('dentista a las 15 horas, comprar yerba y llamar a Juan')
  * // → [{ time: '15:00', title: 'Dentista' }, { title: 'Comprar yerba y llamar a Juan' }]
  */
-export function parseDictation(text: string): ParsedTask[] {
-  return text
-    .split(SPLIT_RE)
-    .map((chunk) => (chunk ?? '').trim())
-    .filter(Boolean)
-    .map((chunk) => {
-      const { time, rest } = extractTime(chunk)
-      return { time, title: cleanTitle(rest) }
-    })
-    .filter((t) => t.title.length > 0 || t.time)
-    .map((t) => (t.time ? { time: t.time, title: t.title || 'Recordatorio' } : { title: t.title }))
+export function parseDictation(text: string, today?: ISODate): ParsedTask[] {
+  let groupDate: ISODate | undefined
+  const out: ParsedTask[] = []
+  for (const raw of text.split(SPLIT_RE)) {
+    let chunk = (raw ?? '').trim()
+    if (!chunk) continue
+    if (today) {
+      const h = HEADING_RE.exec(chunk)
+      const head = h && !/\d$/.test(h[1]) ? extractDate(h[1], today) : null
+      if (h && head?.date && !head.rest) {
+        groupDate = head.date
+        chunk = h[2].trim()
+        if (!chunk) continue
+      }
+    }
+    const { time, rest: afterTime } = extractTime(chunk)
+    const { date, rest } = today ? extractDate(afterTime, today) : { date: undefined, rest: afterTime }
+    const title = cleanTitle(rest)
+    if (!title && !time) {
+      if (date) groupDate = date
+      continue
+    }
+    const day = date ?? groupDate
+    out.push({ ...(day && day !== today ? { date: day } : {}), ...(time ? { time } : {}), title: title || 'Recordatorio' })
+  }
+  return out
+}
+
+/** Tasks still pending from the last `maxDays` days: they move to today ("carry over"). */
+export function tasksToCarry<T extends { date: ISODate; done: boolean; deletedAt?: string }>(
+  tasks: readonly T[],
+  today: ISODate,
+  maxDays = 7,
+): T[] {
+  const oldest = addDays(today, -maxDays)
+  return tasks.filter((t) => !t.done && !t.deletedAt && compareISO(t.date, today) < 0 && compareISO(t.date, oldest) >= 0)
 }
 
 /** Sort: timed tasks first by time, then untimed ones keeping their order. */

@@ -149,3 +149,33 @@ export function formatKg(n: number): string {
 export function formatKcal(n: number): string {
   return fmtThousands(Math.round(n))
 }
+
+/**
+ * Meals to repeat with one tap: the ones from the last `days` days, most frequent first (then the
+ * most recent). Same text (or same meal + kcal when there's no text) counts as the same meal;
+ * the latest copy is returned.
+ */
+export function frequentMeals<T extends { date: ISODate; kcal: number; label?: string; meal?: string; deletedAt?: string; updatedAt?: string }>(
+  entries: readonly T[],
+  today: ISODate,
+  limit = 6,
+  days = 30,
+): T[] {
+  const since = addDays(today, -(days - 1))
+  const groups = new Map<string, { latest: T; count: number }>()
+  for (const e of entries) {
+    if (e.deletedAt || e.date < since || e.date > today) continue
+    const key = e.label?.trim() ? e.label.trim().toLocaleLowerCase('es') : `${e.meal ?? ''}|${e.kcal}`
+    const g = groups.get(key)
+    const newer = (a: T, b: T) => a.date > b.date || (a.date === b.date && (a.updatedAt ?? '') > (b.updatedAt ?? ''))
+    if (!g) groups.set(key, { latest: e, count: 1 })
+    else {
+      g.count++
+      if (newer(e, g.latest)) g.latest = e
+    }
+  }
+  return [...groups.values()]
+    .sort((a, b) => b.count - a.count || (a.latest.date < b.latest.date ? 1 : a.latest.date > b.latest.date ? -1 : 0))
+    .slice(0, limit)
+    .map((g) => g.latest)
+}

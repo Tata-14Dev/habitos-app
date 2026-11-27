@@ -8,6 +8,7 @@ import {
   habitRangeRatio,
   isHabitActive,
   isHabitScheduled,
+  isPausedBetween,
   isWeeklyGoal,
   mentalState,
   scheduledHabits,
@@ -43,6 +44,7 @@ function weeksRatio(habit: HabitLike, logs: readonly HabitLogLike[], from: ISODa
     const met = weekProgress(habit, logs, w, mondayFirst).met
     if (w === thisWeek && !met) continue // still in progress: not a miss yet
     if (w > thisWeek) continue
+    if (!met && isPausedBetween(habit, w, end)) continue // paused that week: not a miss either
     total++
     if (met) done++
   }

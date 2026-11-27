@@ -27,6 +27,14 @@ export interface HabitLike {
   onDate?: ISODate
   weekdays?: number[]
   goal?: HabitGoal
+  /** Breaks (vacation, illness): paused days are not due, so they neither count nor break a streak. */
+  pauses?: readonly HabitPause[]
+}
+
+/** `to` missing = paused until resumed. */
+export interface HabitPause {
+  from: ISODate
+  to?: ISODate
 }
 
 export interface HabitLogLike {
@@ -55,6 +63,53 @@ export function activeHabits<H extends HabitLike>(habits: readonly H[], date: IS
   return habits.filter((h) => isHabitActive(h, date))
 }
 
+const inPause = (p: HabitPause, date: ISODate) => compareISO(date, p.from) >= 0 && (!p.to || compareISO(date, p.to) <= 0)
+
+/** Is `date` inside one of the habit's pauses? */
+export function isHabitPaused(habit: Pick<HabitLike, 'pauses'>, date: ISODate): boolean {
+  return (habit.pauses ?? []).some((p) => inPause(p, date))
+}
+
+/** The pause in effect on `date`, if any. */
+export function currentPause(habit: Pick<HabitLike, 'pauses'>, date: ISODate): HabitPause | undefined {
+  return (habit.pauses ?? []).find((p) => inPause(p, date))
+}
+
+/** Does any pause touch [from, to]? (Weekly goals: a paused week isn't a miss.) */
+export function isPausedBetween(habit: Pick<HabitLike, 'pauses'>, from: ISODate, to: ISODate): boolean {
+  return (habit.pauses ?? []).some((p) => compareISO(p.from, to) <= 0 && (!p.to || compareISO(p.to, from) >= 0))
+}
+
+/** Adds the pause [from, to], merged with the ones it overlaps or touches. */
+export function addPause(pauses: readonly HabitPause[] = [], from: ISODate, to?: ISODate): HabitPause[] {
+  let merged: HabitPause = { from, to }
+  const rest: HabitPause[] = []
+  for (const p of pauses) {
+    const startsBeforeEnd = !merged.to || compareISO(p.from, addDays(merged.to, 1)) <= 0
+    const endsAfterStart = !p.to || compareISO(addDays(p.to, 1), merged.from) >= 0
+    if (!startsBeforeEnd || !endsAfterStart) {
+      rest.push(p)
+      continue
+    }
+    merged = {
+      from: compareISO(p.from, merged.from) < 0 ? p.from : merged.from,
+      to: !p.to || !merged.to ? undefined : compareISO(p.to, merged.to) > 0 ? p.to : merged.to,
+    }
+  }
+  return [...rest, merged].sort((a, b) => compareISO(a.from, b.from)).map((p) => (p.to ? p : { from: p.from }))
+}
+
+/**
+ * "Reanudar" on `today`: the pause in effect ends yesterday, or disappears if it starts today.
+ * Pauses planned for later are kept.
+ */
+export function endPause(pauses: readonly HabitPause[] = [], today: ISODate): HabitPause[] {
+  return pauses.flatMap((p) => {
+    if (!inPause(p, today)) return [p]
+    return compareISO(p.from, today) >= 0 ? [] : [{ from: p.from, to: addDays(today, -1) }]
+  })
+}
+
 /** Progress habit measured per week (an amount per week, or N times per week). */
 export function isWeeklyGoal(habit: HabitLike): boolean {
   const g = habit.kind === 'progress' ? habit.goal : undefined
@@ -78,7 +133,7 @@ export function isOneOff(habit: HabitLike): boolean {
  * progress per day → every day · weekly goals → never (they are measured per week).
  */
 export function isHabitScheduled(habit: HabitLike, date: ISODate): boolean {
-  if (!isHabitActive(habit, date)) return false
+  if (!isHabitActive(habit, date) || isHabitPaused(habit, date)) return false
   if (habit.kind === 'scheduled') {
     if (habit.onDate) return habit.onDate === date
     return (habit.weekdays ?? []).includes(weekday(date))
@@ -305,7 +360,8 @@ export function weeklyStreaks(
     if (weekProgress(habit, logs, w, mondayFirst).met) {
       run++
       if (run > best) best = run
-    } else if (w !== currentWeek) {
+    } else if (w !== currentWeek && !isPausedBetween(habit, w, addDays(w, 6))) {
+      // A week with a pause doesn't break the streak (it only adds if the goal was met anyway).
       run = 0
     }
   }

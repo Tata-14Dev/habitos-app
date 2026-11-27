@@ -27,6 +27,7 @@ import { usePlanModel, type PlanModel } from '../usePlanModel'
 import { AmountDashboard, LogHistory } from './AmountPlan'
 import { CurrentLine } from './CurrentLine'
 import { PlanForm } from './PlanForm'
+import { PlanPaceCard } from './PlanPace'
 import { fmtDate, marginText, situationText } from '../format'
 import { fmtDecimal } from '../../domain/numberFormat'
 import { t, tn } from '../i18n'
@@ -65,12 +66,14 @@ export function PlanDetailScreen() {
       {isAmount ? (
         <>
           <AmountDashboard plan={plan} logs={logs} today={today} />
+          <PlanPaceCard plan={plan} today={today} />
           <LogHistory plan={plan} logs={logs} today={today} />
         </>
       ) : (
         <>
       <Dashboard plan={plan} model={model} items={items} today={today} />
       <ItemsBurnup plan={plan} model={model} items={items} today={today} />
+      <PlanPaceCard plan={plan} today={today} />
 
       <Card>
         <SectionTitle right={<Button onClick={() => setPasting(true)}>{t('+ Ítems')}</Button>}>{t('Ítems')}</SectionTitle>

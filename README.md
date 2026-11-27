@@ -15,6 +15,7 @@
   <img src="docs/screenshots/habits.png" width="170" alt="Habits grouped by morning, afternoon and night">
   <img src="docs/screenshots/plan.png" width="170" alt="Study plan burn-up: actual, projection and original plan">
   <img src="docs/screenshots/year.png" width="170" alt="Year in pixels: one square per day, shaded by % of habits done">
+  <img src="docs/screenshots/stats.png" width="170" alt="Statistics: 30-day consistency per habit, with the change against the previous 30 days">
   <img src="docs/screenshots/health.png" width="170" alt="Weight trend with weigh-ins and the 7-day trend line">
 </p>
 
@@ -37,6 +38,7 @@ I used to track habits and study plans in spreadsheets. They were fine on a lapt
 - **Multi-device sync, live.** Email and password auth with Supabase and last-write-wins conflict resolution. Changes made on one device show up on the others in under a second (Supabase Realtime), with polling as a fallback.
 - **Push notifications.** A morning reminder with the day's tasks, plan items and habits, and a Sunday-night weekly summary (habits % vs. last week, progress per plan, weight change). Web Push to the installed iOS PWA, scheduled with `pg_cron` and sent by a Supabase Edge Function in each user's local time zone.
 - **Burn-up and yearly view.** Each plan charts its original plan, actual progress and projection. A yearly view shows the % per month and a "year in pixels" of every day.
+- **Statistics.** Inside Habits: 30-day consistency per habit with its trend, completion by weekday, mood on good days vs the rest, and each plan's weekly pace against what it needs. Every habit has its own page with streaks, charts and a 12-month calendar.
 - **Optional weight & calorie tracking.** Turned on in Settings. Log meals by typing what you ate (`200 g arroz, 2 huevos, 1 taza de leche`): the app looks each food up in a built-in dictionary of ~300 Argentine foods (approximate values) plus your own "Mis alimentos" and computes the kcal, with a live preview; plain kcal still works. See [docs/COMIDAS.md](docs/COMIDAS.md). Track that against a daily target and one weigh-in a day. Because daily weight is noisy, the app shows a 7-day trend, a weekly rate from a least-squares fit over the last 4 weeks, and the date you'd reach your goal weight at that rate.
 - **Themes.** A neon pink and sky-blue default ("Neón", night-indigo base) plus three presets, or a custom primary + accent + base. Every color was generated in OKLCH and validated: text on buttons ≥ 4.5:1, chart colors legible on the surface, shade ramps that read in order, and primary/accent pairs that stay distinguishable for color-blind people. Pairs that fail are disabled in the picker. The choice syncs across devices.
 - **Spanish and English.** The UI follows the device language (or a setting): texts, dates and number formats. Voice dictation and meal parsing understand Spanish, since they're built around Argentine phrasing and foods. A unit test fails if any UI string lacks a translation.

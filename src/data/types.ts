@@ -1,5 +1,5 @@
 import type { ISODate } from '../domain/dates'
-import type { HabitGoal, HabitKind, TimeOfDay } from '../domain/habits'
+import type { HabitGoal, HabitKind, HabitPause, TimeOfDay } from '../domain/habits'
 
 export type { ISODate }
 
@@ -25,6 +25,8 @@ export interface Habit extends SyncFields {
   onDate?: ISODate
   /** …or some weekdays (0 = Sunday). */
   weekdays?: number[]
+  /** Breaks (vacation, illness): see isHabitPaused. */
+  pauses?: HabitPause[]
   /** Progress habits. */
   goal?: HabitGoal
   order: number
@@ -152,6 +154,8 @@ export interface Task extends SyncFields {
   title: string
   done: boolean
   order: number
+  /** Moved here because it wasn't done that day: the day it was first planned for. */
+  carriedFrom?: ISODate
 }
 
 export interface Settings extends SyncFields {

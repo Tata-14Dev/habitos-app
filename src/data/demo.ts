@@ -20,6 +20,7 @@ import {
   setMood,
   setPlanLog,
   updateSettings,
+  pauseHabit,
 } from './repo'
 import type { FoodItem, Meal } from './types'
 
@@ -69,11 +70,13 @@ const TEXT = {
     cama: 'Hacer la cama', perro: 'Pasear al perro', pantallas: 'Sin pantallas antes de dormir', natacion: 'Natación', gym: 'Gimnasio', leer: 'Leer', paginas: 'páginas',
     milestone1: 'Terminar el path', milestone1d: 'Una room por día, domingos libres', milestone2: 'Examen SAL1', milestone2d: 'Ventana de 24 h',
     eng: 'Inglés B2', horas: 'horas', tasks: 'dentista a las 15 horas, comprar yerba, después llamar a Juan, pagar la luz',
+    yesterday: 'devolver los libros a la biblioteca', upcoming: 'Mañana: renovar el pasaporte. El viernes que viene cena con Ana a las 21',
   },
   en: {
     cama: 'Make the bed', perro: 'Walk the dog', pantallas: 'No screens before bed', natacion: 'Swimming', gym: 'Gym', leer: 'Read', paginas: 'pages',
     milestone1: 'Finish the path', milestone1d: 'One room a day, Sundays off', milestone2: 'SAL1 exam', milestone2d: '24-hour window',
     eng: 'Spanish B2', horas: 'hours', tasks: 'dentist a las 15 horas, buy coffee, después call John, pay the electricity bill',
+    yesterday: 'return the library books', upcoming: 'Mañana: renew the passport. El viernes que viene dinner with Ana a las 21',
   },
 }
 
@@ -187,4 +190,11 @@ async function fill(today: ISODate, lang: 'es' | 'en') {
       if (kcal > 0) await addFood({ date: d, kcal, label: lang === 'en' ? en : text, meal, items })
     }
   }
+
+  // ── Added later (after every random draw, so the data above stays the same) ──
+  // A task left from yesterday (it moves to today when Hoy opens) and some for the next days.
+  await addTasksFromText(addDays(today, -1), T.yesterday)
+  await addTasksFromText(today, T.upcoming)
+  // A past break: a few days of vacation without the "no screens" habit.
+  await pauseHabit(pantallas.id, addDays(today, -30), addDays(today, -26))
 }

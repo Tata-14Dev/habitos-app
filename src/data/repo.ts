@@ -6,12 +6,15 @@ import { todayISO, type ISODate } from '../domain/dates'
 import { safeCall } from '../domain/errors'
 import { parseItemList, toScheduleConfig, toScheduleItems } from '../domain/plans'
 import { buildBaseline, projectSchedule } from '../domain/schedule'
-import { parseDictation } from '../domain/tasks'
+import { parseDictation, tasksToCarry } from '../domain/tasks'
+import { addDays } from '../domain/dates'
+import { addPause, endPause } from '../domain/habits'
 import { db } from './db'
 import { newId, nowStamp, store } from './store'
 import {
   DEFAULT_SETTINGS,
   type CustomFood,
+  type FoodEntry,
   type FoodItem,
   type Habit,
   type Meal,
@@ -50,6 +53,20 @@ export async function reorderHabits(orderedIds: string[]) {
     'habits',
     habits.map((h) => ({ ...h, order: orderedIds.indexOf(h.id) })),
   )
+}
+
+/** Pauses a habit from `from` (default today) until `to` (open-ended if missing). */
+export async function pauseHabit(id: string, from: ISODate, to?: ISODate) {
+  const h = await db.habits.get(id)
+  if (!alive(h)) return
+  await store.put('habits', { ...h, pauses: addPause(h.pauses, from, to) })
+}
+
+/** Ends the pause in effect on `today`. */
+export async function resumeHabit(id: string, today: ISODate = todayISO()) {
+  const h = await db.habits.get(id)
+  if (!alive(h)) return
+  await store.put('habits', { ...h, pauses: endPause(h.pauses, today) })
 }
 
 export async function setHabitDone(habitId: string, date: ISODate, done: boolean) {
@@ -292,6 +309,17 @@ export async function deleteCustomFood(id: string) {
   await store.softDelete('customFoods', [id])
 }
 
+/** Edits a meal (text, kcal, meal of the day). */
+export async function updateFood(id: string, changes: { kcal: number; label?: string; meal?: Meal; items?: FoodItem[] }) {
+  const items = changes.items?.length ? changes.items.map((i) => ({ ...i, kcal: Math.round(i.kcal) })) : undefined
+  await store.patch('foodEntries', id, { ...changes, items, kcal: Math.round(changes.kcal) })
+}
+
+/** Logs a copy of a past meal on `date`. */
+export async function repeatFood(entry: FoodEntry, date: ISODate) {
+  return addFood({ date, kcal: entry.kcal, label: entry.label, meal: entry.meal, items: entry.items })
+}
+
 export async function deleteFood(id: string) {
   await store.softDelete('foodEntries', [id])
 }
@@ -309,15 +337,44 @@ export async function deleteMilestone(id: string) {
 
 // ─── Tasks (dictation) ──────────────────────────────────────────────────────
 
-/** Parses dictated text into tasks for `date`. Returns how many were created. */
-export async function addTasksFromText(date: ISODate, text: string): Promise<Task[]> {
-  const parsed = parseDictation(text)
-  const existing = (await db.tasks.where('date').equals(date).toArray()).filter(alive)
+/**
+ * Parses dictated text into tasks. They go to `today` unless the text names a day
+ * ("mañana", "el jueves", "el 15"). Returns the created tasks.
+ */
+export async function addTasksFromText(today: ISODate, text: string): Promise<Task[]> {
+  const parsed = parseDictation(text, today)
+  const next = new Map<ISODate, number>()
+  const rows: Task[] = []
+  for (const p of parsed) {
+    const date = p.date ?? today
+    if (!next.has(date)) {
+      const existing = (await db.tasks.where('date').equals(date).toArray()).filter(alive)
+      next.set(date, existing.reduce((m, t) => Math.max(m, t.order + 1), 0))
+    }
+    const order = next.get(date)!
+    next.set(date, order + 1)
+    rows.push({ id: newId(), date, time: p.time, title: p.title, done: false, order, updatedAt: '' })
+  }
+  return store.putMany('tasks', rows)
+}
+
+/**
+ * Pending tasks of the last 7 days move to `today` (keeping the day they were first planned for).
+ * Idempotent: two devices doing it at once write the same result.
+ */
+export async function carryOverTasks(today: ISODate = todayISO()): Promise<number> {
+  const recent = await db.tasks.where('date').between(addDays(today, -7), today, true, false).toArray()
+  const moving = tasksToCarry(recent, today)
+  if (!moving.length) return 0
+  const existing = (await db.tasks.where('date').equals(today).toArray()).filter(alive)
   const start = existing.reduce((m, t) => Math.max(m, t.order + 1), 0)
-  return store.putMany(
+  await store.putMany(
     'tasks',
-    parsed.map((p, i) => ({ id: newId(), date, time: p.time, title: p.title, done: false, order: start + i })),
+    moving
+      .sort((a, b) => a.date.localeCompare(b.date) || a.order - b.order)
+      .map((t, i) => ({ ...t, date: today, order: start + i, carriedFrom: t.carriedFrom ?? t.date })),
   )
+  return moving.length
 }
 
 export async function updateTask(id: string, changes: Partial<Task>) {

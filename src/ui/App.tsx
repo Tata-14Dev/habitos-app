@@ -14,6 +14,8 @@ const named = <K extends string>(load: () => Promise<Record<K, ComponentType>>, 
 const HabitsScreen = named(() => import('./screens/HabitsScreen'), 'HabitsScreen')
 const MonthScreen = named(() => import('./screens/MonthScreen'), 'MonthScreen')
 const YearScreen = named(() => import('./screens/YearScreen'), 'YearScreen')
+const StatsScreen = named(() => import('./screens/StatsScreen'), 'StatsScreen')
+const HabitDetailScreen = named(() => import('./screens/HabitDetailScreen'), 'HabitDetailScreen')
 const PlansScreen = named(() => import('./screens/PlansScreen'), 'PlansScreen')
 const PlanDetailScreen = named(() => import('./screens/PlanDetailScreen'), 'PlanDetailScreen')
 const HealthScreen = named(() => import('./screens/HealthScreen'), 'HealthScreen')
@@ -46,6 +48,8 @@ export default function App() {
           <Route path="/habitos" element={<HabitsScreen />} />
           <Route path="/habitos/mes/:year/:month" element={<MonthScreen />} />
           <Route path="/habitos/anio/:year" element={<YearScreen />} />
+          <Route path="/habitos/estadisticas" element={<StatsScreen />} />
+          <Route path="/habitos/h/:id" element={<HabitDetailScreen />} />
           <Route path="/planes" element={<PlansScreen />} />
           <Route path="/planes/:id" element={<PlanDetailScreen />} />
           <Route path="/salud" element={<HealthScreen />} />

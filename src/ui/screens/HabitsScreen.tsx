@@ -35,16 +35,19 @@ export function HabitsScreen() {
 
   return (
     <div className="space-y-5">
-      <header className="flex items-end justify-between pt-2">
+      <header className="space-y-3 pt-2">
         <h1 className="text-2xl font-semibold text-brand">{t('Hábitos')}</h1>
-        <div className="flex gap-4 text-sm">
-          <Link to={`/habitos/mes/${year}/${month}`} className="underline">
-            {t('Ver mes 📅')}
+        <nav className="grid grid-cols-3 gap-2 text-sm" aria-label={t('Vistas de hábitos')}>
+          <Link to="/habitos/estadisticas" className="flex min-h-11 items-center justify-center rounded-xl bg-primary/15 font-medium">
+            {t('📊 Estadísticas')}
           </Link>
-          <Link to={`/habitos/anio/${year}`} className="underline">
-            {t('Ver año 🗓️')}
+          <Link to={`/habitos/mes/${year}/${month}`} className="flex min-h-11 items-center justify-center rounded-xl bg-white shadow-sm dark:bg-neutral-800">
+            {t('📅 Mes')}
           </Link>
-        </div>
+          <Link to={`/habitos/anio/${year}`} className="flex min-h-11 items-center justify-center rounded-xl bg-white shadow-sm dark:bg-neutral-800">
+            {t('🗓️ Año')}
+          </Link>
+        </nav>
       </header>
 
       <Card>
@@ -66,7 +69,7 @@ export function HabitsScreen() {
               return (
                 <div className="flex items-center gap-2 py-2">
                   {handle}
-                  <button className="min-w-0 flex-1 text-left" onClick={() => setEditing(h)}>
+                  <Link to={`/habitos/h/${h.id}`} className="min-w-0 flex-1 text-left">
                     <span className="text-base">
                       {h.emoji && <span className="mr-1">{h.emoji}</span>}
                       {h.name}
@@ -77,7 +80,7 @@ export function HabitsScreen() {
                       {h.endDate ? ' ' + t('hasta {date}', { date: fmtDate(h.endDate, false) }) : ''}
                       {!active && ' · ' + t('fuera de vigencia')}
                     </span>
-                  </button>
+                  </Link>
                   {!isOneOff(h) && (
                     <span className="text-right text-xs text-ink-soft dark:text-neutral-400">
                       🔥 {s.current}
@@ -141,7 +144,7 @@ function Options<T extends string | undefined>({
   )
 }
 
-function HabitForm({ habit, onDone }: { habit: Partial<Habit>; onDone: () => void }) {
+export function HabitForm({ habit, onDone }: { habit: Partial<Habit>; onDone: () => void }) {
   const [kind, setKind] = useState<HabitKind>(habit.kind ?? 'fixed')
   const [name, setName] = useState(habit.name ?? '')
   const [emoji, setEmoji] = useState(habit.emoji ?? '')

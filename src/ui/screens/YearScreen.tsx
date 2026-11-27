@@ -22,7 +22,7 @@ function step(pct: number): number {
   return Math.min(3, Math.floor(pct * 4))
 }
 
-function MiniMonth({ stats, mondayFirst, ramp, today }: { stats: MonthStats; mondayFirst: boolean; ramp: readonly string[]; today: ISODate }) {
+export function MiniMonth({ stats, mondayFirst, ramp, today }: { stats: MonthStats; mondayFirst: boolean; ramp: readonly string[]; today: ISODate }) {
   const offset = (weekday(stats.days[0].date) - (mondayFirst ? 1 : 0) + 7) % 7
   return (
     <Link to={`/habitos/mes/${stats.year}/${stats.month}`} className="block rounded-xl bg-paper p-3 dark:bg-neutral-900">
